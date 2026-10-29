@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ticket-create/config",
+  "title": "ticket-create config",
+  "type": "object",
+  "properties": {
+    "hooks": {
+      "type": "object"
+    }
+  },
+  "additionalProperties": true
+}

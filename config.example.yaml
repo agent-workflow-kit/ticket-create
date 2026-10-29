@@ -1,0 +1,2 @@
+# Example config for ticket-create. Location: ~/.config/ticket-create/config.yaml (drop-ins: config.d/*.yaml). Keys are defined in docs/interface.md once designed.
+hooks: {}
