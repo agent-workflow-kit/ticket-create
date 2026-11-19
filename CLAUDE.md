@@ -38,11 +38,9 @@ shared contracts package.
 
 ## Workflow
 
-1. Start with a design session that resolves the open topics in `docs/design.md` and records
-   decisions there.
-2. Write `docs/interface.md` and `schemas/` (the interface spec), and register it in
-   `../awkit-docs/interface-registry.md`.
-3. Implement test-first.
+1. `docs/interface.md` is the single normative source and `docs/design.md` records the decisions; read both before changing anything. `docs/plan.md` has the staged plan.
+2. Change the interface and `schemas/` first, and keep `../awkit-docs/interface-registry.md` current.
+3. Implement test-first, one plan stage at a time.
 
 ## Repository workflow
 
