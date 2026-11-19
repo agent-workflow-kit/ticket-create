@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "ticket-create/hooks/post-create.json",
   "title": "post-create hook payload (stdin)",
-  "description": "After the create and sprint steps. attempt and dedupe_key are null for a sprint-only run. event_id is fresh per invocation. No repo or labels key (the draft has a repo; it is not part of the payload). No title, body, notes or other model text.",
+  "description": "After the create, accept and sprint steps; not run for a declined, blocked, needs_human, dry-run or error-before-the-write call. attempt and dedupe_key are null for a sprint-only run and for accept. event_id is fresh per invocation. No repo or labels key (the draft has a repo; it is not part of the payload). No title, body, notes or other model text.",
   "type": "object",
   "properties": {
     "tool": {
@@ -43,7 +43,11 @@
       ]
     },
     "sprint_step": {
-      "$ref": "../defs.json#/$defs/sprint_step"
+      "enum": [
+        "none",
+        "done",
+        "failed"
+      ]
     },
     "attempt": {
       "oneOf": [

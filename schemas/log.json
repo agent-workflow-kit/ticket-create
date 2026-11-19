@@ -356,8 +356,7 @@
           "$ref": "defs.json#/$defs/draft_id"
         },
         "key": {
-          "type": "string",
-          "maxLength": 256
+          "$ref": "defs.json#/$defs/ticket_key"
         }
       },
       "required": [

@@ -46,7 +46,7 @@ retention:
   done: 90d                     # lifetime of drafts that have a ticket or may have one (created, sprint_failed, unknown)
 
 limits:
-  artifact_bytes: 262144        # size cap for the draft artifact, 4096 to 1048576
+  artifact_bytes: 262144        # size cap for the draft artifact and for a --set @FILE value, 4096 to 1048576
   title_chars: 255              # title length cap, 1 to 255
 
 # Hooks (design guide section 8). pre-draft may veto (exit 11) or escalate (exit 13);

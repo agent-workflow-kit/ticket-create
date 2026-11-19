@@ -23,9 +23,9 @@ Bundles a Claude Code plugin named `ticket-create` in `plugin/` with the default
 
 See [Commands](docs/interface.md#commands) for every flag.
 
-- `ticket-create draft`: make a draft (interactive by default; `--mode headless` for unattended drafts).
+- `ticket-create draft`: make a draft (interactive by default; `--mode headless` for unattended drafts). On a terminal an interactive run offers `Review and create now?` when the draft is ready, unless you pass `--no-review`, `--json` or `--result-file`; a headless run never asks. `--result-file PATH` writes the result as JSON for callers whose terminal the session occupies.
 - `ticket-create create DRAFT_ID`: review, edit and create.
-- `ticket-create list`, `show`, `discard`, `prune`: manage drafts.
+- `ticket-create list`, `show`, `discard`, `prune`: manage drafts. `list` shows each draft's status, origin and whether its agent is `live`, `parked` or `none`; a draft whose run crashed shows as `orphan` and can be continued with `draft --continue`.
 - `ticket-create validate [--probe]`, `export`: checks and the public audit and log files.
 
 ## Dependencies

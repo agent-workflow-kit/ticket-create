@@ -11,9 +11,8 @@
         "name": {
           "type": "string",
           "minLength": 1,
-          "maxLength": 64,
-          "pattern": "^[A-Za-z0-9._@-]+$",
-          "description": "Your name for human:<user> and the audit; defaults to the OS username."
+          "maxLength": 256,
+          "description": "Your name for human:<user> and the audit (normalized to the actor grammar at use); defaults to the OS username."
         }
       },
       "required": [],
@@ -172,7 +171,8 @@
       "type": "object",
       "propertyNames": {
         "type": "string",
-        "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}/[A-Z][A-Z0-9_]*$"
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}/[A-Z][A-Z0-9_]*$",
+        "description": "Full match."
       },
       "additionalProperties": {
         "type": "object",
@@ -410,27 +410,33 @@
   "$defs": {
     "env_name": {
       "type": "string",
-      "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,127}$"
+      "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,127}$",
+      "description": "Full match."
     },
     "repo_id": {
       "type": "string",
-      "pattern": "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:[.][a-z0-9](?:[a-z0-9-]*[a-z0-9])?)*(?::[0-9]{1,5})?(?:/(?![.][.]?(?:/|$))[A-Za-z0-9._-]+)+$"
+      "pattern": "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:[.][a-z0-9](?:[a-z0-9-]*[a-z0-9])?)*(?::[0-9]{1,5})?(?:/(?![.][.]?(?:/|$))[A-Za-z0-9._-]+)+$",
+      "description": "Full match."
     },
     "site": {
       "type": "string",
-      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$"
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+      "description": "Full match."
     },
     "project": {
       "type": "string",
-      "pattern": "^[A-Z][A-Z0-9_]*$"
+      "pattern": "^[A-Z][A-Z0-9_]*$",
+      "description": "Full match."
     },
     "type_name": {
       "type": "string",
-      "pattern": "^[A-Za-z0-9][A-Za-z0-9 _.-]{0,63}$"
+      "pattern": "^[\\p{L}\\p{N}][\\p{L}\\p{N} _.()&/+-]{0,62}[\\p{L}\\p{N}_.()&/+-]$|^[\\p{L}\\p{N}]$",
+      "description": "Full match."
     },
     "skill_name": {
       "type": "string",
-      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "description": "Full match."
     },
     "sandbox_level": {
       "enum": [
@@ -455,7 +461,7 @@
         {
           "type": "string",
           "pattern": "^[0-9]+(?:[.][0-9]+)?(?:ms|s|m|h|d)?$",
-          "description": "Seconds, or a number with ms, s, m, h or d."
+          "description": "Seconds, or a number with ms, s, m, h or d. Full match."
         }
       ]
     },
@@ -468,7 +474,7 @@
         {
           "type": "string",
           "pattern": "^[0-9]+(?:[.][0-9]+)?(?:ms|s|m)?$",
-          "description": "Seconds, or a number with ms, s or m."
+          "description": "Seconds, or a number with ms, s or m. Full match."
         }
       ]
     },
@@ -481,7 +487,8 @@
         },
         {
           "type": "string",
-          "pattern": "^[0-9]+(?:ms|s|m)?$"
+          "pattern": "^[0-9]+(?:ms|s|m)?$",
+          "description": "Full match."
         }
       ],
       "default": 30,

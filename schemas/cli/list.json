@@ -74,6 +74,22 @@
               }
             ]
           },
+          "agent": {
+            "oneOf": [
+              {
+                "enum": [
+                  "live",
+                  "parked",
+                  "none",
+                  "unknown"
+                ],
+                "description": "The agent's state as found by its stored id, else by label and kind; null with --no-agents."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "created_at": {
             "$ref": "../defs.json#/$defs/ts"
           },
@@ -92,6 +108,7 @@
           "failure",
           "created_key",
           "agent_id",
+          "agent",
           "created_at",
           "updated_at"
         ],

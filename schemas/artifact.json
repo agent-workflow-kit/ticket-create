@@ -21,7 +21,7 @@
       "type": "string",
       "minLength": 1,
       "maxLength": 255,
-      "pattern": "^[^\\u0000-\\u0008\\u000b-\\u001f\\u007f-\\u009f\\u00ad\\u034f\\u061c\\u115f-\\u1160\\u17b4-\\u17b5\\u180b-\\u180f\\u200b-\\u200f\\u2028-\\u202e\\u2060-\\u206f\\u2800\\u3164\\ufe00-\\ufe0f\\ufeff\\uffa0\\ufff9-\\ufffc\\u000a]+$",
+      "pattern": "^[^\\u0000-\\u0008\\u000b-\\u001f\\u007f-\\u009f\\u00ad\\u034f\\u061c\\u115f-\\u1160\\u17b4-\\u17b5\\u180b-\\u180f\\u200b-\\u200f\\u2028-\\u202e\\u2060-\\u206f\\u2800\\u3164\\ufe00-\\ufe0f\\ufeff\\uffa0\\ufff9-\\ufffc\\u0009\\u000a]+$",
       "description": "One line (no line breaks); 1 to limits.title_chars characters after trimming.",
       "x-untrusted": true
     },

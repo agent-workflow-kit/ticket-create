@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "ticket-create/hooks/post-draft.json",
   "title": "post-draft hook payload (stdin)",
-  "description": "After every run that ends in ready, failed or abandoned, a failed --continue run included (then status is ready with failure set). event_id is fresh per invocation. No repo or labels key (the draft has a repo; it is not part of the payload). No title, body, notes or other model text.",
+  "description": "After every run that ends in ready, failed or abandoned, a failed --continue run included (then status is ready with failure set), and after an adopted run. event_id is fresh per invocation. No repo or labels key (the draft has a repo; it is not part of the payload). No title, body, notes or other model text.",
   "type": "object",
   "properties": {
     "tool": {

@@ -15,12 +15,15 @@
           "object_type": {
             "enum": [
               "draft",
-              "tmp_file"
+              "prompt",
+              "result",
+              "tmp"
             ]
           },
           "id": {
             "type": "string",
-            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/#=+-]{0,255}$"
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/#=+-]{0,255}$",
+            "description": "Full match."
           },
           "result": {
             "enum": [
