@@ -1,12 +1,519 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "ticket-create/config",
+  "$id": "ticket-create/config.json",
   "title": "ticket-create config",
+  "description": "Merged config (config.yaml plus config.d drop-ins). Unknown keys are refused. Self-contained: no external $ref.",
   "type": "object",
   "properties": {
+    "me": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[A-Za-z0-9._@-]+$",
+          "description": "Your name for human:<user> and the audit; defaults to the OS username."
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "ticketctl": {
+      "type": "object",
+      "properties": {
+        "config": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/abs_path"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "A ticketctl config file passed as --config."
+        },
+        "site": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/site"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The default --site."
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "skill": {
+      "$ref": "#/$defs/skill_name",
+      "default": "ticket-create:draft-ticket"
+    },
+    "mode": {
+      "enum": [
+        "interactive",
+        "headless"
+      ],
+      "default": "interactive"
+    },
+    "model": {
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "timeout": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/timeout_duration"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Passed to agent-spawn; null keeps its default."
+    },
+    "cwd": {
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "The session's working directory (an absolute path or session-dir); null means the caller's directory (interactive) or session-dir (headless)."
+    },
+    "sandbox": {
+      "$ref": "#/$defs/sandbox_level",
+      "default": "off"
+    },
+    "setting_sources": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "user",
+          "project",
+          "local"
+        ]
+      },
+      "uniqueItems": true,
+      "default": [],
+      "description": "--setting-sources; an empty list loads none."
+    },
+    "permission_profile": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/abs_path"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "null uses the bundled profile file."
+    },
+    "env_allowlist": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/env_name"
+      },
+      "uniqueItems": true,
+      "default": [],
+      "description": "Names added to the fixed base list of --env-allowlist-only."
+    },
+    "plugin_dirs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/abs_path"
+      },
+      "uniqueItems": true,
+      "default": [],
+      "description": "Extra plugin directories, absolute and owned by the user."
+    },
+    "templates": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/$defs/type_name"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/abs_path"
+      },
+      "default": {},
+      "description": "Map of type name or default to a template file (absolute, owned by the user)."
+    },
+    "projects": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}/[A-Z][A-Z0-9_]{1,19}$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "repo": {
+            "oneOf": [
+              {
+                "$ref": "#/$defs/repo_id"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The repo id used when --repo is absent."
+          },
+          "default_type": {
+            "oneOf": [
+              {
+                "$ref": "#/$defs/type_name"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The type used when none is given."
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "default": {},
+      "description": "Per-project settings keyed by <site>/<KEY>."
+    },
+    "duplicates": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 25,
+          "default": 10
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "editor": {
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "The edit command, split with shlex and never run through a shell; null means $VISUAL, then $EDITOR, then vi."
+    },
+    "retention": {
+      "type": "object",
+      "properties": {
+        "open": {
+          "$ref": "#/$defs/retention_duration",
+          "default": "30d"
+        },
+        "done": {
+          "$ref": "#/$defs/retention_duration",
+          "default": "90d"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "limits": {
+      "type": "object",
+      "properties": {
+        "artifact_bytes": {
+          "type": "integer",
+          "minimum": 1024,
+          "maximum": 1048576,
+          "default": 65536
+        },
+        "title_chars": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 255,
+          "default": 255
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
     "hooks": {
-      "type": "object"
+      "type": "object",
+      "properties": {
+        "pre-draft": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/pre_hook"
+          },
+          "default": []
+        },
+        "post-draft": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/post_hook"
+          },
+          "default": []
+        },
+        "post-create": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/post_hook"
+          },
+          "default": []
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "repos": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/$defs/repo_id"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "skill": {
+            "$ref": "#/$defs/skill_name"
+          },
+          "templates": {
+            "type": "object",
+            "propertyNames": {
+              "$ref": "#/$defs/type_name"
+            },
+            "additionalProperties": {
+              "$ref": "#/$defs/abs_path"
+            },
+            "default": {},
+            "description": "Map of type name or default to a template file (absolute, owned by the user)."
+          },
+          "sandbox": {
+            "$ref": "#/$defs/sandbox_level"
+          },
+          "setting_sources": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "user",
+                "project",
+                "local"
+              ]
+            },
+            "uniqueItems": true,
+            "default": [],
+            "description": "--setting-sources; an empty list loads none."
+          },
+          "env_allowlist": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/env_name"
+            },
+            "uniqueItems": true,
+            "default": [],
+            "description": "Names added to the fixed base list of --env-allowlist-only."
+          },
+          "plugin_dirs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/abs_path"
+            },
+            "uniqueItems": true,
+            "default": [],
+            "description": "Extra plugin directories, absolute and owned by the user."
+          },
+          "permission_profile": {
+            "oneOf": [
+              {
+                "$ref": "#/$defs/abs_path"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "null uses the bundled profile file."
+          },
+          "cwd": {
+            "oneOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4096
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The session's working directory (an absolute path or session-dir); null means the caller's directory (interactive) or session-dir (headless)."
+          },
+          "model": {
+            "oneOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "default": {},
+      "description": "Per-repo overrides keyed by repo id. A repository-level setting may not select a program to run or a place to send credentials, so hooks, ticketctl.* and editor are refused here."
     }
   },
-  "additionalProperties": true
+  "required": [],
+  "additionalProperties": false,
+  "$defs": {
+    "env_name": {
+      "type": "string",
+      "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,127}$"
+    },
+    "repo_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:[.][a-z0-9](?:[a-z0-9-]*[a-z0-9])?)*(?::[0-9]{1,5})?(?:/(?![.][.]?(?:/|$))[A-Za-z0-9._-]+)+$"
+    },
+    "site": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "project": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9_]{1,19}$"
+    },
+    "type_name": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9 _.-]{0,63}$"
+    },
+    "skill_name": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "sandbox_level": {
+      "enum": [
+        "required",
+        "preferred",
+        "off"
+      ]
+    },
+    "abs_path": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 4096,
+      "pattern": "^/[^\\u0000]+$",
+      "description": "An absolute path owned by the user."
+    },
+    "retention_duration": {
+      "oneOf": [
+        {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        {
+          "type": "string",
+          "pattern": "^[0-9]+(?:[.][0-9]+)?(?:ms|s|m|h|d)?$",
+          "description": "Seconds, or a number with ms, s, m, h or d."
+        }
+      ]
+    },
+    "timeout_duration": {
+      "oneOf": [
+        {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        {
+          "type": "string",
+          "pattern": "^[0-9]+(?:[.][0-9]+)?(?:ms|s|m)?$",
+          "description": "Seconds, or a number with ms, s or m."
+        }
+      ]
+    },
+    "hook_timeout": {
+      "oneOf": [
+        {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 600
+        },
+        {
+          "type": "string",
+          "pattern": "^[0-9]+(?:ms|s|m)?$"
+        }
+      ],
+      "default": 30,
+      "description": "A duration; a bare integer means seconds (1 to 600)."
+    },
+    "pre_hook": {
+      "type": "object",
+      "properties": {
+        "cmd": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "timeout": {
+          "$ref": "#/$defs/hook_timeout"
+        }
+      },
+      "required": [
+        "cmd"
+      ],
+      "additionalProperties": false,
+      "description": "A pre hook: exit 11 veto, 13 escalate."
+    },
+    "post_hook": {
+      "type": "object",
+      "properties": {
+        "cmd": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "timeout": {
+          "$ref": "#/$defs/hook_timeout"
+        },
+        "async": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "required": [
+        "cmd"
+      ],
+      "additionalProperties": false
+    }
+  }
 }

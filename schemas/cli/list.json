@@ -1,0 +1,139 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ticket-create/cli/list.json",
+  "title": "list --json",
+  "type": "object",
+  "properties": {
+    "drafts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "draft_id": {
+            "oneOf": [
+              {
+                "$ref": "../defs.json#/$defs/draft_id"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "$ref": "../defs.json#/$defs/list_status"
+          },
+          "origin": {
+            "oneOf": [
+              {
+                "$ref": "../defs.json#/$defs/origin"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "site": {
+            "oneOf": [
+              {
+                "$ref": "../defs.json#/$defs/site"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "project": {
+            "oneOf": [
+              {
+                "$ref": "../defs.json#/$defs/project"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "type": {
+            "oneOf": [
+              {
+                "$ref": "../defs.json#/$defs/type_name"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": {
+            "oneOf": [
+              {
+                "$ref": "../defs.json#/$defs/title"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_key": {
+            "oneOf": [
+              {
+                "$ref": "../defs.json#/$defs/ticket_key"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "agent_id": {
+            "oneOf": [
+              {
+                "$ref": "../defs.json#/$defs/agent_id"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_at": {
+            "oneOf": [
+              {
+                "$ref": "../defs.json#/$defs/ts"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "updated_at": {
+            "oneOf": [
+              {
+                "$ref": "../defs.json#/$defs/ts"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "draft_id",
+          "status",
+          "origin",
+          "site",
+          "project",
+          "type",
+          "title",
+          "created_key",
+          "agent_id",
+          "created_at",
+          "updated_at"
+        ],
+        "additionalProperties": false,
+        "description": "An orphan row (an agent found by label) may have no draft row, so most members are nullable."
+      },
+      "maxItems": 500
+    }
+  },
+  "required": [
+    "drafts"
+  ],
+  "additionalProperties": false
+}

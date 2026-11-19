@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ticket-create/cli/discard.json",
+  "title": "discard --json",
+  "type": "object",
+  "properties": {
+    "results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "draft_id": {
+            "$ref": "../defs.json#/$defs/draft_id"
+          },
+          "result": {
+            "enum": [
+              "discarded",
+              "refused"
+            ]
+          },
+          "reason": {
+            "oneOf": [
+              {
+                "$ref": "../defs.json#/$defs/error_reason"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "agent": {
+            "enum": [
+              "none",
+              "torn_down",
+              "teardown_failed"
+            ]
+          }
+        },
+        "required": [
+          "draft_id",
+          "result",
+          "reason",
+          "agent"
+        ],
+        "additionalProperties": false
+      },
+      "maxItems": 1000
+    }
+  },
+  "required": [
+    "results"
+  ],
+  "additionalProperties": false
+}

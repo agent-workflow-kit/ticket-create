@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ticket-create/artifact.json",
+  "title": "draft-ticket artifact",
+  "description": "The artifact the draft-ticket skill writes as draft.json for a done report (interface.md, Slot contract). Unknown keys are refused. title, body_md, notes and string field values are untrusted. parent, labels, assignee and fields may be omitted; assignee and parent may be null.",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "draft_id": {
+      "$ref": "defs.json#/$defs/draft_id"
+    },
+    "run_token": {
+      "$ref": "defs.json#/$defs/run_token"
+    },
+    "type": {
+      "$ref": "defs.json#/$defs/type_name"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255,
+      "pattern": "^[^\\r\\n]+$",
+      "description": "One line (no line breaks); 1 to limits.title_chars characters after trimming.",
+      "x-untrusted": true
+    },
+    "body_md": {
+      "$ref": "defs.json#/$defs/body_md"
+    },
+    "parent": {
+      "oneOf": [
+        {
+          "$ref": "defs.json#/$defs/ticket_key"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "labels": {
+      "$ref": "defs.json#/$defs/ticket_labels"
+    },
+    "assignee": {
+      "oneOf": [
+        {
+          "$ref": "defs.json#/$defs/assignee"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "fields": {
+      "$ref": "defs.json#/$defs/fields"
+    },
+    "notes": {
+      "$ref": "defs.json#/$defs/notes"
+    }
+  },
+  "required": [
+    "schema_version",
+    "draft_id",
+    "run_token",
+    "type",
+    "title",
+    "body_md",
+    "notes"
+  ],
+  "additionalProperties": false
+}

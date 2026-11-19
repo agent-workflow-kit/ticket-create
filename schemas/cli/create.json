@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ticket-create/cli/create.json",
+  "title": "create --json",
+  "description": "error is present only on a non-zero exit with an adopted draft.",
+  "type": "object",
+  "properties": {
+    "draft": {
+      "$ref": "../defs.json#/$defs/draft_summary"
+    },
+    "ticket": {
+      "oneOf": [
+        {
+          "$ref": "../defs.json#/$defs/ticket_result"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "sprint_step": {
+      "$ref": "../defs.json#/$defs/sprint_step"
+    },
+    "sprint": {
+      "oneOf": [
+        {
+          "$ref": "../defs.json#/$defs/sprint"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "attempt": {
+      "oneOf": [
+        {
+          "$ref": "../defs.json#/$defs/attempt"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "dry_run": {
+      "type": "boolean"
+    },
+    "plan": {
+      "oneOf": [
+        {
+          "$ref": "../defs.json#/$defs/create_plan"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "required_fields": {
+      "type": "array",
+      "items": {
+        "$ref": "../defs.json#/$defs/required_field"
+      },
+      "maxItems": 200
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "$ref": "../defs.json#/$defs/warning"
+      },
+      "maxItems": 100
+    },
+    "error": {
+      "$ref": "../defs.json#/$defs/error_body"
+    }
+  },
+  "required": [
+    "draft",
+    "ticket",
+    "sprint_step",
+    "sprint",
+    "attempt",
+    "dry_run",
+    "plan",
+    "required_fields",
+    "warnings"
+  ],
+  "additionalProperties": false
+}

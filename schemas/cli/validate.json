@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ticket-create/cli/validate.json",
+  "title": "validate --json",
+  "description": "Exits 0 whenever the checks ran; a failed check is data.",
+  "type": "object",
+  "properties": {
+    "valid": {
+      "type": "boolean"
+    },
+    "probe": {
+      "type": "boolean"
+    },
+    "checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "enum": [
+              "config",
+              "siblings",
+              "skill",
+              "templates",
+              "ticketctl",
+              "versions",
+              "kind_check"
+            ]
+          },
+          "ok": {
+            "type": "boolean"
+          },
+          "code": {
+            "oneOf": [
+              {
+                "$ref": "../defs.json#/$defs/code"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "skipped": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "ok",
+          "code"
+        ],
+        "additionalProperties": false
+      },
+      "maxItems": 50
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "$ref": "../defs.json#/$defs/warning"
+      },
+      "maxItems": 100
+    }
+  },
+  "required": [
+    "valid",
+    "probe",
+    "checks",
+    "warnings"
+  ],
+  "additionalProperties": false
+}

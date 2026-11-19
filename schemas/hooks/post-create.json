@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ticket-create/hooks/post-create.json",
+  "title": "post-create hook payload (stdin)",
+  "description": "After the create and sprint steps. At least once; deduplicate by event_id. No repo or labels key (the tool has no repository notion of its own). No title, body, notes or other model text.",
+  "type": "object",
+  "properties": {
+    "tool": {
+      "const": "ticket-create"
+    },
+    "hook": {
+      "const": "post-create"
+    },
+    "object_type": {
+      "const": "draft"
+    },
+    "object_id": {
+      "$ref": "../defs.json#/$defs/draft_id"
+    },
+    "result": {
+      "enum": [
+        "created",
+        "reused",
+        "partial",
+        "failed",
+        "unknown"
+      ]
+    },
+    "site": {
+      "$ref": "../defs.json#/$defs/site"
+    },
+    "project": {
+      "$ref": "../defs.json#/$defs/project"
+    },
+    "key": {
+      "oneOf": [
+        {
+          "$ref": "../defs.json#/$defs/ticket_key"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "sprint_step": {
+      "$ref": "../defs.json#/$defs/sprint_step"
+    },
+    "attempt": {
+      "type": "object",
+      "properties": {
+        "n": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "plan_sha256": {
+          "$ref": "../defs.json#/$defs/sha256"
+        }
+      },
+      "required": [
+        "n",
+        "plan_sha256"
+      ],
+      "additionalProperties": false
+    },
+    "event_id": {
+      "$ref": "../defs.json#/$defs/event_id"
+    },
+    "dedupe_key": {
+      "$ref": "../defs.json#/$defs/hook_dedupe_key"
+    },
+    "reads_third_party": {
+      "const": false
+    },
+    "tainted": {
+      "const": false
+    }
+  },
+  "required": [
+    "tool",
+    "hook",
+    "object_type",
+    "object_id",
+    "result",
+    "site",
+    "project",
+    "key",
+    "sprint_step",
+    "attempt",
+    "event_id",
+    "dedupe_key",
+    "reads_third_party",
+    "tainted"
+  ],
+  "additionalProperties": false
+}

@@ -1,47 +1,159 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "ticket-create/audit",
+  "$id": "ticket-create/audit.json",
   "title": "ticket-create audit.jsonl record",
-  "description": "Audit record for ticket-create. Whether this tool writes audit records is decided in its design session (architecture §14).",
+  "description": "Public, append-only. An attempted record before each ticketctl create --yes and sprint add --yes call and an outcome record after it, paired by attempt_id, plus one outcome record per draft run. No title, body, notes or model text, no secrets.",
   "type": "object",
   "properties": {
     "ts": {
-      "type": "string",
-      "format": "date-time"
+      "$ref": "defs.json#/$defs/ts"
+    },
+    "seq": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "phase": {
+      "enum": [
+        "attempted",
+        "outcome"
+      ]
+    },
+    "attempt_id": {
+      "$ref": "defs.json#/$defs/attempt_id"
     },
     "actor": {
-      "type": "string"
+      "$ref": "defs.json#/$defs/actor"
     },
     "decision_id": {
       "oneOf": [
         {
-          "type": "string"
+          "$ref": "defs.json#/$defs/decision_id"
         },
         {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
+          "$ref": "defs.json#/$defs/decision_ids"
+        },
+        {
+          "type": "null"
         }
       ]
     },
-    "target": {
-      "type": "string"
-    },
     "action": {
-      "type": "string"
+      "enum": [
+        "create",
+        "sprint_add",
+        "draft"
+      ]
+    },
+    "target": {
+      "oneOf": [
+        {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}/[A-Z][A-Z0-9_]{1,19}$",
+          "description": "<site>/<project>"
+        },
+        {
+          "$ref": "defs.json#/$defs/draft_id"
+        }
+      ]
     },
     "inputs": {
-      "type": "object"
+      "type": "object",
+      "properties": {
+        "draft_id": {
+          "$ref": "defs.json#/$defs/draft_id"
+        },
+        "dedupe_key": {
+          "$ref": "defs.json#/$defs/dedupe_key"
+        },
+        "plan_sha256": {
+          "$ref": "defs.json#/$defs/sha256"
+        },
+        "body_sha256": {
+          "$ref": "defs.json#/$defs/sha256"
+        },
+        "origin": {
+          "$ref": "defs.json#/$defs/origin"
+        },
+        "overrides": {
+          "type": "array",
+          "items": {
+            "$ref": "defs.json#/$defs/field_name"
+          },
+          "maxItems": 64,
+          "uniqueItems": true
+        },
+        "agent_id": {
+          "$ref": "defs.json#/$defs/agent_id"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
     },
-    "result": {}
+    "result": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "key": {
+              "oneOf": [
+                {
+                  "$ref": "defs.json#/$defs/ticket_key"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "reused": {
+              "type": "boolean"
+            },
+            "ticketctl_attempt_id": {
+              "oneOf": [
+                {
+                  "$ref": "defs.json#/$defs/ticketctl_attempt_id"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "outcome": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+            },
+            "code": {
+              "oneOf": [
+                {
+                  "$ref": "defs.json#/$defs/code"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "outcome"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
   },
   "required": [
     "ts",
+    "seq",
+    "phase",
+    "attempt_id",
     "actor",
-    "target",
+    "decision_id",
     "action",
+    "target",
+    "inputs",
     "result"
   ],
-  "additionalProperties": true
+  "additionalProperties": false
 }

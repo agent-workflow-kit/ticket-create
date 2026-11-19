@@ -1,33 +1,373 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "ticket-create/log",
+  "$id": "ticket-create/log.json",
   "title": "ticket-create log.jsonl record",
-  "type": "object",
-  "properties": {
-    "ts": {
-      "type": "string",
-      "format": "date-time"
+  "description": "Public, append-only. Events with ids, codes, counts and hashes only; no title, body, notes or model text.",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "ts": {
+          "$ref": "defs.json#/$defs/ts"
+        },
+        "seq": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "level": {
+          "enum": [
+            "debug",
+            "info",
+            "warn",
+            "error"
+          ]
+        },
+        "event": {
+          "const": "command"
+        },
+        "command": {
+          "$ref": "defs.json#/$defs/command_name"
+        },
+        "exit_code": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
+        },
+        "duration_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "draft_id": {
+          "$ref": "defs.json#/$defs/draft_id"
+        },
+        "plan_sha256": {
+          "$ref": "defs.json#/$defs/sha256"
+        },
+        "artifact_sha256": {
+          "$ref": "defs.json#/$defs/sha256"
+        },
+        "counts": {
+          "type": "object",
+          "propertyNames": {
+            "$ref": "defs.json#/$defs/code"
+          },
+          "additionalProperties": {
+            "$ref": "defs.json#/$defs/count"
+          },
+          "maxProperties": 32
+        }
+      },
+      "required": [
+        "ts",
+        "seq",
+        "level",
+        "event",
+        "command",
+        "exit_code",
+        "duration_ms"
+      ],
+      "additionalProperties": false
     },
-    "level": {
-      "type": "string",
-      "enum": [
-        "debug",
-        "info",
-        "warn",
-        "error"
-      ]
+    {
+      "type": "object",
+      "properties": {
+        "ts": {
+          "$ref": "defs.json#/$defs/ts"
+        },
+        "seq": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "level": {
+          "enum": [
+            "debug",
+            "info",
+            "warn",
+            "error"
+          ]
+        },
+        "event": {
+          "const": "hook_result"
+        },
+        "hook": {
+          "$ref": "defs.json#/$defs/hook_name"
+        },
+        "object_id": {
+          "$ref": "defs.json#/$defs/draft_id"
+        },
+        "exit_code": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "duration_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "timed_out": {
+          "type": "boolean"
+        },
+        "async": {
+          "type": "boolean"
+        },
+        "vetoed": {
+          "type": "boolean"
+        },
+        "decision_ids": {
+          "$ref": "defs.json#/$defs/decision_ids"
+        }
+      },
+      "required": [
+        "ts",
+        "seq",
+        "level",
+        "event",
+        "hook",
+        "exit_code",
+        "timed_out"
+      ],
+      "additionalProperties": false
     },
-    "event": {
-      "type": "string"
+    {
+      "type": "object",
+      "properties": {
+        "ts": {
+          "$ref": "defs.json#/$defs/ts"
+        },
+        "seq": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "level": {
+          "enum": [
+            "debug",
+            "info",
+            "warn",
+            "error"
+          ]
+        },
+        "event": {
+          "const": "lower_call"
+        },
+        "tool": {
+          "enum": [
+            "ticketctl",
+            "agent-spawn"
+          ]
+        },
+        "call": {
+          "$ref": "defs.json#/$defs/code"
+        },
+        "exit_code": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "duration_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "draft_id": {
+          "$ref": "defs.json#/$defs/draft_id"
+        }
+      },
+      "required": [
+        "ts",
+        "seq",
+        "level",
+        "event",
+        "tool",
+        "call",
+        "exit_code"
+      ],
+      "additionalProperties": false
     },
-    "message": {
-      "type": "string"
+    {
+      "type": "object",
+      "properties": {
+        "ts": {
+          "$ref": "defs.json#/$defs/ts"
+        },
+        "seq": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "level": {
+          "enum": [
+            "debug",
+            "info",
+            "warn",
+            "error"
+          ]
+        },
+        "event": {
+          "const": "session"
+        },
+        "draft_id": {
+          "$ref": "defs.json#/$defs/draft_id"
+        },
+        "agent_id": {
+          "$ref": "defs.json#/$defs/agent_id"
+        },
+        "phase": {
+          "$ref": "defs.json#/$defs/session_phase"
+        },
+        "outcome": {
+          "$ref": "defs.json#/$defs/session_outcome"
+        },
+        "end_reason": {
+          "$ref": "defs.json#/$defs/end_reason"
+        }
+      },
+      "required": [
+        "ts",
+        "seq",
+        "level",
+        "event",
+        "draft_id",
+        "outcome"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "ts": {
+          "$ref": "defs.json#/$defs/ts"
+        },
+        "seq": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "level": {
+          "enum": [
+            "debug",
+            "info",
+            "warn",
+            "error"
+          ]
+        },
+        "event": {
+          "const": "draft_state"
+        },
+        "draft_id": {
+          "$ref": "defs.json#/$defs/draft_id"
+        },
+        "from": {
+          "oneOf": [
+            {
+              "$ref": "defs.json#/$defs/status"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "to": {
+          "$ref": "defs.json#/$defs/status"
+        },
+        "reason": {
+          "$ref": "defs.json#/$defs/code"
+        }
+      },
+      "required": [
+        "ts",
+        "seq",
+        "level",
+        "event",
+        "draft_id",
+        "from",
+        "to",
+        "reason"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "ts": {
+          "$ref": "defs.json#/$defs/ts"
+        },
+        "seq": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "level": {
+          "enum": [
+            "debug",
+            "info",
+            "warn",
+            "error"
+          ]
+        },
+        "event": {
+          "const": "lease"
+        },
+        "draft_id": {
+          "$ref": "defs.json#/$defs/draft_id"
+        },
+        "action": {
+          "enum": [
+            "acquired",
+            "released",
+            "taken_over",
+            "lost",
+            "stalled"
+          ]
+        }
+      },
+      "required": [
+        "ts",
+        "seq",
+        "level",
+        "event",
+        "draft_id",
+        "action"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "ts": {
+          "$ref": "defs.json#/$defs/ts"
+        },
+        "seq": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "level": {
+          "enum": [
+            "debug",
+            "info",
+            "warn",
+            "error"
+          ]
+        },
+        "event": {
+          "const": "warning"
+        },
+        "code": {
+          "$ref": "defs.json#/$defs/code"
+        },
+        "draft_id": {
+          "$ref": "defs.json#/$defs/draft_id"
+        },
+        "key": {
+          "type": "string",
+          "maxLength": 256
+        }
+      },
+      "required": [
+        "ts",
+        "seq",
+        "level",
+        "event",
+        "code"
+      ],
+      "additionalProperties": false
     }
-  },
-  "required": [
-    "ts",
-    "level",
-    "event"
-  ],
-  "additionalProperties": true
+  ]
 }

@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ticket-create/cli/draft.json",
+  "title": "draft --json",
+  "description": "With --dry-run draft is the planned record and session is null. error is present only on a non-zero exit with an adopted run.",
+  "type": "object",
+  "properties": {
+    "draft": {
+      "$ref": "../defs.json#/$defs/draft_summary"
+    },
+    "session": {
+      "oneOf": [
+        {
+          "$ref": "../defs.json#/$defs/session_result"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "dry_run": {
+      "type": "boolean"
+    },
+    "plan": {
+      "oneOf": [
+        {
+          "$ref": "../defs.json#/$defs/draft_plan"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "$ref": "../defs.json#/$defs/warning"
+      },
+      "maxItems": 100
+    },
+    "error": {
+      "$ref": "../defs.json#/$defs/error_body"
+    }
+  },
+  "required": [
+    "draft",
+    "session",
+    "dry_run",
+    "plan",
+    "warnings"
+  ],
+  "additionalProperties": false
+}
