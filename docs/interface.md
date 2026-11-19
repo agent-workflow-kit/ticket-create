@@ -9,7 +9,7 @@ ticket-create drafts a ticket with an interactive Claude session and creates it 
 - **Draft.** One stored record per ticket under preparation, with a `draft_id` that ticket-create generates before the session starts. It holds the validated artifact, the human's overrides, the session's agent id and the history of create attempts. Everything a retry needs is in the draft.
 - **Seed.** Optional text (`--idea`, `--idea-file`) and fixed fields (`--project`, `--type`, `--parent`, `--repo`, `--site`, `--ticket-label`) given to `draft`. Seed text is untrusted and fenced in the prompt. Fixed fields are trusted facts. The stored draft keeps the fixed value: when the artifact's `type` or `parent` differs, or an artifact omits a fixed ticket label, the artifact's value is dropped, the warning `fixed_field_changed` is stored with the dropped value, and the screen shows it as a suggestion. The human adopts it with `create --type`, `--parent` or `--ticket-label`. Ticket labels: the stored list is the fixed list plus the artifact's other labels.
 - **Run token.** A fresh random 128-bit value (32 lowercase hex characters) generated for every session run, including a continuation, and stated in the prompt outside the fence. The artifact echoes the token of the newest prompt. It binds an artifact to the run that was launched for it.
-- **Origin.** `headless` when any run of the draft was headless, else `interactive`. It is set at T1 to the mode of the first run, can change from `interactive` to `headless` when a later run is headless, and never changes back. The review screen always shows it.
+- **Origin.** `headless` when any run of the draft was headless, else `interactive`. It is set at T1 to the mode of the first run, can change from `interactive` to `headless` when a later run is headless (T3 writes it before a headless launch; an adopted run counts with the mode its own record states, never the current call's `--mode`), and never changes back. The review screen always shows it.
 - **Attempt.** One call of `ticketctl create --yes` with its dedupe key, plan hash and outcome, recorded in the draft. The sprint step is not an attempt.
 - **Review screen.** The screen `create` shows before the one confirmation (see Review screen).
 - **Human present.** Exactly when `/dev/tty` opens for reading and writing. No other test is used (see Prompt and terminal rules).
@@ -53,27 +53,27 @@ An interactive draft needs a terminal on stdin and stdout (agent-spawn's `--plac
 
 ### create
 
-Runs the Create order. It is the only command that writes to the ticket system. Flags override the stored draft: they are applied in memory and saved to the draft (see Draft record and statuses) only by a call that reaches the prompt with a human present; they are shown on the review screen as `overridden`, and `--dry-run` saves nothing. `--ticket-label` given on `create` replaces the draft's label list; `--type`, `--parent` and `--ticket-label` are also how the human adopts a suggestion shown on the screen. `--set NAME=VALUE|@FILE` takes a field name that follows the artifact `fields` grammar and reserved-name list, matched case-insensitively against the stored field names and ticketctl's logical names; a name that violates them exits 2 `invalid_argument`. An inline value is a string. A `@FILE` value is read by the reader as UTF-8 text (cap `limits.artifact_bytes`); when the stored field is an array, or the file holds a JSON array of at most 50 strings and the field is new, it is an array of strings, else a string. `--set NAME=` removes the field from the draft. `--again` starts a new generation (see Dedupe key and attempts).
+Runs the Create order. It is the only command that writes to the ticket system. Flags override the stored draft: they are applied in memory and saved to the draft (see Draft record and statuses) only by a call that reaches the prompt with a human present; they are shown on the review screen as `overridden`, and `--dry-run` saves nothing. `--ticket-label` given on `create` replaces the draft's label list; `--type`, `--parent` and `--ticket-label` are also how the human adopts a suggestion shown on the screen. `--set NAME=VALUE|@FILE` takes a field name that follows the artifact `fields` grammar and reserved-name list, matched case-insensitively against the stored field names and ticketctl's logical names; a name that violates them exits 2 `invalid_argument` (`epic` is reserved like the dedicated keys, because ticketctl's logical name `epic` sets the parent). An inline value is a string. A `@FILE` value is read by the reader as UTF-8 text (cap `limits.artifact_bytes`); when the stored field is an array, or the file holds a JSON array of at most 50 strings and the field is new, it is an array of strings, else a string. `--set NAME=` removes the field from the draft. `--again` starts a new generation (see Dedupe key and attempts).
 
 `--dry-run` runs everything up to the human prompt with no terminal needed: it prints the screen's facts (the resolved plan with the plan hash, the screen state, warnings, required fields) and exits 0 for the `ready` and `already_created` states (the state is in the result) and 22 for `blocked`.
 
 ### list and show
 
-`list` prints drafts newest first. By default it hides `created` drafts; `--all` shows them. `--status` filters (repeatable; `orphan` selects the `drafting` rows that `list` shows as `orphan`). Rows carry `failure`, `updated_at` and `agent` (`live`, `parked`, `none` or `unknown`, found as in Gate; null with `--no-agents`, which makes the command offline). A `drafting` row that no process holds the lease of and that has no live agent is shown as `orphan`. There is no `discarded` status (`discard` deletes). `--limit` is 1 to 500 (default 100).
+`list` prints drafts newest first. By default it hides `created` drafts; `--all` shows them. `--status` filters (repeatable; `orphan` selects the `drafting` rows that `list` shows as `orphan`). Rows carry `failure`, `updated_at` and `agent` (`live`, `parked`, `none` or `unknown`, found as in Gate; `unknown` when the lookup fails or two agents carry the draft's label; null with `--no-agents`, which makes the command offline). A `drafting` row that no process holds the lease of and that has no live agent (found, not `unknown`) is shown as `orphan`; with `unknown` it stays `drafting`. There is no `discarded` status (`discard` deletes). `--limit` is 1 to 500 (default 100).
 
 `show` prints one draft: status, origin, site, project, type, repo, title, the attempts and, with `--body`, the body through the sanitizer; it prints `agent_id` and, for a draft with a parked agent, the line `agent-spawn show AGENT_ID shows the session's last report`; it never prints the `run_token`. Without `--body` only the sizes and hashes are printed. `--field NAME` prints one field's value through the sanitizer as text (it cannot be combined with `--json`).
 
 ### discard
 
-Removes drafts and tears down any parked agent of each. On a terminal it asks once per call (`Discard N draft(s)? [y/N]`, `/dev/tty` rules; for an `unknown` draft the prompt says a ticket may exist); `--yes` skips the question and is accepted from any actor because the action is local and does not publish (design guide §4.4). Without a human and without `--yes` it exits 13. A draft that is live (its lease is held by a running process or its agent runs, see Gate) is refused (exit 20, `reason: live`, the one reason for in use). The agent it tears down is the one found as Labels says. A `created`, `unknown` or `sprint_failed` draft is discarded without touching the ticket. With any refused item the call exits 20 and prints every item's result; a refused or `teardown_failed` item keeps its row. `discard` records the agent's `csession_id` in the output and prints `claude-session forget --purge ID` as the way to delete the frozen artifact early.
+Removes drafts and tears down any parked agent of each. On a terminal it asks once per call (`Discard N draft(s)? [y/N]`, `/dev/tty` rules; for an `unknown` draft the prompt says a ticket may exist); `--yes` skips the question and is accepted from any actor because the action is local and does not publish (design guide §4.4). Without a human and without `--yes` it exits 13. A draft that is live (its lease is held by a running process or its agent runs, see Gate; any status) is refused (exit 20, `reason: live`, the one reason for in use). The agent it tears down is the one found as Labels says; when that lookup fails (an agent-spawn error, or two agents with the draft's label) the call exits 12 `lower_failed` before it touches that draft and never treats the draft as having no agent. A `created`, `unknown` or `sprint_failed` draft is discarded without touching the ticket. With any refused item the call exits 20 and prints every item's result; a refused or `teardown_failed` item keeps its row. `discard` records the agent's `csession_id` in the output and prints `claude-session forget --purge ID` as the way to delete the frozen artifact early.
 
 ### prune
 
-Deletes drafts past their retention (see `retention.open` and `retention.done`) and tears down their parked agents. It skips a draft whose lease is held or whose agent is live (result `skipped`, `reason: locked` or `live`) and exits 0. It also removes entries older than a day in `prompts/`, `results/` and `tmp/` (files and directories, by `lstat`, never following a symlink); their `object_type` is `prompt`, `result` or `tmp`. `--dry-run` lists what it would remove. There is no cron block; run it by hand or from a harness rule.
+Deletes drafts past their retention (see `retention.open` and `retention.done`) and tears down their parked agents. It skips a draft whose lease is held or whose agent is live, whatever its status (result `skipped`, `reason: locked` or `live`), and a draft whose agent lookup failed (`reason: agent_unknown`), and exits 0. It also removes entries older than a day in `prompts/`, `results/` and `tmp/` (files and directories, by `lstat`, never following a symlink); their `object_type` is `prompt`, `result` or `tmp`. `--dry-run` lists what it would remove. There is no cron block; run it by hand or from a harness rule.
 
 ### validate
 
-Offline: loads the config (exit 2 `invalid_config` naming the key), checks that the sibling binaries resolve on `PATH` (exit 12 `tool_missing` when one is missing), runs the skill preflight for the configured skill and checks the template files. `--probe` additionally runs `ticketctl validate --probe --json`, `agent-spawn --version` and `ticketctl --version` against the pinned minimums (exit 12 `tool_too_old`) and `agent-spawn launch --dry-run` with a probe prompt (the kind check, no model call). The checks are named `config`, `siblings`, `skill`, `templates`, `ticketctl`, `versions` and `kind_check`. `validate` also lists the resolved permission profile's denies (`profile_denies`) and warns `credential_env_empty` when `credential_env` is empty and `mcp_inherited` when the dry-run profile's `mcp` is `inherit`. It prints `{valid, probe, checks[], profile_denies[], warnings[]}` whatever the exit code (with exit 2 or 12 the failure is its `error` member); any other failed check is data with exit 0.
+Offline: loads the config (exit 2 `invalid_config` naming the key), checks that the sibling binaries resolve on `PATH` (exit 12 `tool_missing` when one is missing), runs the skill preflight for the configured skill and checks the template files. `--probe` additionally runs `ticketctl validate --probe --json`, `agent-spawn --version` and `ticketctl --version` against the pinned minimums (exit 12 `tool_too_old`) and `agent-spawn launch --dry-run` with a probe prompt (the kind check, no model call). The checks are named `config`, `siblings`, `skill`, `templates`, `ticketctl`, `versions` and `kind_check`. `validate` also lists the resolved permission profile's denies (`profile_denies`), warns `profile_missing_deny` when the profile has no deny rule for one of `ticketctl`, `agent-spawn`, `ticket-create` and `mcp__*` (the warning's message names the missing entries; a Bash deny rule counts for a program when it starts with the program's name), warns `credential_env_empty` when `credential_env` is empty and `mcp_inherited` when the dry-run profile's `mcp` is `inherit`. It prints `{valid, probe, checks[], profile_denies[], warnings[]}` whatever the exit code (with exit 2 or 12 the failure is its `error` member); any other failed check is data with exit 0.
 
 ### export
 
@@ -107,7 +107,7 @@ rest_status(d):
 
 Stored fields: `draft_id`, `status`, `origin`, `created_at`, `updated_at`, `site`, `project`, `repo`, `type`, `title`, `body_md`, `parent`, `assignee`, `ticket_labels`, `fields`, `notes`, `overrides` (the closed list `title`, `body`, `type`, `project`, `site`, `parent`, `assignee`, `labels`, `sprint`, `fields` of what the human changed), `seed`, `warnings`, `agent_id`, `run_token` of the last run (never printed), `artifact` (`sha256`, `size`), `failure` (`code`, `outcome`, `detail`), `generation`, `created_key`, `created_url`, `sprint` (`selector`, `id`, `name`, `board`, `step`) and the `attempts` list. Text fields hold your own draft text; the database is private (mode 0600 in a 0700 directory).
 
-`seed` holds what `draft` was given: `type`, `parent` and `ticket_labels` are the fixed values (null when not given; a `--ticket-label ''` on `draft` counts as not given), `has_seed` and `seed_bytes` describe the idea text (the text itself is never stored). It is written with the row (T1) and never changed, not by `--continue` either. `warnings` is a list of `{code, field, value}` (draft-time warnings only, today only `fixed_field_changed`; `field` is `type`, `parent` or `ticket_labels`; `value` is the artifact's dropped value, null when the artifact omitted it, model-written and shown only in the gutter zone); it is replaced at every T5 and is empty when the artifact agreed. Site, project and repo are stored as before and are never changed by an artifact.
+`seed` holds what `draft` was given: `type`, `parent` and `ticket_labels` are the fixed values (null when not given; a `--ticket-label ''` on `draft` counts as not given), `has_seed` and `seed_bytes` describe the idea text (the text itself is never stored). It is written with the row (T1) and never changed, not by `--continue` either. `warnings` is a list of `{code, field, value}` (draft-time warnings only, today only `fixed_field_changed`; `field` is `type`, `parent` or `ticket_labels`; `value` is the artifact's dropped value, null when the artifact omitted it, model-written and shown only in the gutter zone; for `ticket_labels` it is the artifact's own label list joined with a comma and a space (a label never holds a comma or a space), at most 1400 characters; it is stored whole and no limit ever cuts it); it is replaced at every T5 and is empty when the artifact agreed. Site, project and repo are stored as before and are never changed by an artifact.
 
 `title`, `body_md`, `type`, `parent`, `assignee`, `notes`, `artifact`, `failure`, `repo`, `created_key`, `created_url` and `agent_id` are null until set; `origin`, `site`, `project`, `seed`, `warnings`, `generation` and `sprint` are never null (`sprint.selector`, `id`, `name` and `board` are null until a sprint is requested or resolved).
 
@@ -116,8 +116,8 @@ Stored fields: `draft_id`, `status`, `origin`, `created_at`, `updated_at`, `site
 | # | From | Event | To | Attempts and notes |
 |---|---|---|---|---|
 | T1 | none | `draft` passes its checks and the `pre-draft` hook | `drafting` | row with `origin` (the mode of this run), `seed`, `run_token`; no attempts |
-| T2 | none | `pre-draft` veto (11) or escalation (13), or an error before any run produced a session | none | the row is deleted |
-| T3 | `drafting` (orphan), `failed`, `abandoned`; `ready` | `draft --continue` passes the gate | `drafting` for the first three; `ready` stays `ready` | new `run_token`; the lease marks the run; a stored artifact and the attempts are kept |
+| T2 | none | `pre-draft` veto (11) or escalation (13), or an error before any run produced a session | none, or `failed` when the launch made an agent record whose teardown failed | the row is deleted; when the teardown of an agent record the launch made fails, the row is kept as `failed` (`failure.code` `launch_failed`, `agent_id` stored, the agent stays parked as in T6) so that `discard` and `prune` retry the teardown |
+| T3 | `drafting` (orphan), `failed`, `abandoned`; `ready` | `draft --continue` passes the gate | `drafting` for the first three; `ready` stays `ready` | new `run_token`; the lease marks the run; a stored artifact and the attempts are kept; `origin` is set to `headless` in this same transaction when the run is headless |
 | T4 | the states of T3 | `--continue` vetoed, escalated, refused or failing before a run | unchanged | nothing is written |
 | T5 | `drafting`, `ready` | the run ends `done` with a valid artifact (or an adopted finished run does) | `ready` | content replaced, seed values applied, overrides cleared, `warnings` set, `failure` cleared, origin per Overview; agent torn down (a failure is a warning) |
 | T6 | `drafting`, `ready` | any other run outcome (Session outcomes table) | `ready` with `failure` set if an artifact is stored, else `failed` or `abandoned` as the table says | the agent stays parked |
@@ -132,8 +132,8 @@ Stored fields: `draft_id`, `status`, `origin`, `created_at`, `updated_at`, `site
 | T15 | `ready`, `unknown` | the human answers `accept` on the `already_created` state | `rest_status` | no attempt row; the ticket is read (see Screen state); `created_key`, `created_url` set; every `unknown` attempt of the current generation becomes `reused` |
 | T16 | `created`, `sprint_failed` | the sprint step fails or does not finish | `sprint_failed` | key kept; exit 12 `partial` |
 | T17 | `created`, `sprint_failed` | a sprint-only run succeeds or fails | `created` or `sprint_failed` | no attempt; `sprint.step` records it |
-| T18 | any except a live `drafting` draft | `discard` | row deleted | the parked agent is torn down; refused with `reason: live` otherwise |
-| T19 | any not locked or live | `prune` after retention | row deleted | the parked agent is torn down |
+| T18 | any status, when the draft is not live | `discard` | row deleted | the parked agent is torn down; refused with `reason: live` otherwise |
+| T19 | any status, when the draft is not locked or live | `prune` after retention | row deleted | the parked agent is torn down; a failed teardown keeps the row |
 
 `stale_ticket` is not a transition for `create` (the plan hash of `create` carries no ticket-system facts, so a changed ticket system cannot make it differ). If ticketctl ever returns it for `create`, it falls under T13 and exit 12 `lower_failed`. It stays a re-plan case in the Sprint step only.
 
@@ -141,35 +141,43 @@ Attempts are append-only. They are never changed after the call ends, `--continu
 
 ### Gate
 
-`create`, `discard` and `draft --continue` enter through one function, and the Gate table decides the rest. Locked (exit 12) is for contention and lost races only.
+`create`, `discard`, `prune` and `draft --continue` enter through one function, and the Gate table decides the rest. Locked (exit 12) is for contention and lost races only.
 
 ```text
-def enter(draft_id, command):                 # create, discard, draft --continue
+def enter(draft_id, command):                 # create, discard, prune, draft --continue
     row = read_row(draft_id)                  # no lease; exit 10 when missing
-    seen = row.status
-    if row.status == "drafting" and is_live(row):
-        exit_refused(20, "draft_not_ready" if command == "create" else "live")
+    refuse_if_live(row, command)              # before the lease, so the answer is 20, not 12
     lease = take_lease(draft_id)              # exit 12 unavailable (locked) on contention; --dry-run takes none
     row = read_row(draft_id)                  # re-read under the lease
-    if row.status != seen:                    # a race: apply the gate once more, never loop
-        if row.status == "drafting" and is_live(row): release(lease); exit_refused(20, same)
+    try: refuse_if_live(row, command)         # always, whatever changed in between
+    except Refused: release(lease); raise
     return row, lease                         # then the Gate table decides the rest
 
-def is_live(row):                             # row.status == "drafting"
+def refuse_if_live(row, command):
+    if command == "create":
+        if row.status == "drafting": exit_refused(20, "draft_not_ready")    # live or orphan; no agent lookup
+        return                                # for create a live agent of another status is not a refusal
+    if is_live(row): exit_refused(20, "live") # any status; prune skips the draft instead (reason live)
+
+def is_live(row):
     if lease_held_by_live_process(row): return True
-    agent = find_agent(row)                   # see below
+    agent = find_agent(row)                   # see below; raises on any lookup error
     return agent is not None and agent.status in ("launching", "live", "tearing_down")
 
-def find_agent(row):
-    if row.agent_id: return agent_spawn_show(row.agent_id)       # stored id first
-    hits = agent_spawn_list(labels=["draft="+row.draft_id, "owner=ticket-create"])
+def find_agent(row):                          # an error is never "no agent"
+    if row.agent_id:
+        return agent_spawn_show(row.agent_id)     # stored id first; exit 10 (record gone) is None, any other failure raises
+    hits = agent_spawn_list(labels=["draft="+row.draft_id, "owner=ticket-create"])   # any failure raises
     hits = [h for h in hits if h.kind == "draft-ticket" and h.status != "torn_down"]
-    return hits[0] if len(hits) == 1 else None                   # none or ambiguous: no agent
+    if len(hits) > 1: raise AgentLookupError("ambiguous")                            # two or more hits raise
+    return hits[0] if hits else None                                                 # only an empty result is "no agent"
 ```
+
+A lookup error (`AgentLookupError`, or an agent-spawn call that failed or timed out) is never read as "no agent": `draft --continue` and `discard` end with exit 12 `lower_failed` (`details.tool` `agent-spawn`) before anything changes, `prune` skips the draft with `reason: agent_unknown`, and `list` shows the agent as `unknown`. `create` makes no lookup. The live check applies to every status for `draft --continue`, `discard` and `prune`, before the cell of the Gate table: a held lease or a live agent exits 20 `live`. So a continuation of a `ready` draft whose process died while its agent still runs is live, and so is a `failed` or `abandoned` draft whose agent still runs.
 
 | Status | `create` | `create --again` | `create --sprint S` | `draft --continue` | `discard` |
 |---|---|---|---|---|---|
-| `drafting` | exit 20 `draft_not_ready` (live or orphan) | same | same | allowed for an orphan (lease free and no live agent), exit 20 `live` otherwise | exit 20 `live` while the draft is live (lease held or agent running) |
+| `drafting` | exit 20 `draft_not_ready` (live or orphan) | same | same | allowed for an orphan (lease free and no live agent found), exit 20 `live` otherwise | exit 20 `live` while the draft is live (lease held or agent running) |
 | `ready` | full create | exit 2 `invalid_combination` | an override of the full create | allowed | allowed |
 | `failed`, `abandoned` | exit 20 `draft_not_ready` | same | same | allowed | allowed |
 | `unknown` | full create with the same key | new generation, full create | an override of the full create | exit 20 `draft_not_ready` | allowed, its prompt says a ticket may exist |
@@ -178,7 +186,7 @@ def find_agent(row):
 
 ## Draft order
 
-`draft` performs these steps in order. `draft --continue` follows the Continue order. An error before any run produced a session (steps 3 to 6: a prompt-file error, a failed kind check, or agent-spawn ending the launch with no run: exit 10, 11, 12, 13, 20 or 21) deletes the row of a new draft and tears down an agent record the launch made (read `agent_id` from the error envelope; a failed teardown is a warning), and leaves a continued draft as it was. Prefetch failures are warnings and never fail the draft.
+`draft` performs these steps in order. `draft --continue` follows the Continue order. An error before any run produced a session (steps 3 to 6: a prompt-file error, a failed kind check, or agent-spawn ending the launch with no run: exit 10, 11, 12, 13, 20 or 21) deletes the row of a new draft and tears down an agent record the launch made (read `agent_id` from the error envelope). When that teardown fails, the row of a new draft is kept as `failed` with `failure.code` `launch_failed` and the `agent_id` (T2), the warning names the agent and `agent-spawn teardown AGENT_ID`, and `discard` or `prune` retries it; for a continued draft a failed teardown is a warning and the draft stays as it was. Prefetch failures are warnings and never fail the draft.
 
 1. **Prepare.** Load config. Site: `--site`, else `ticketctl.site`. Project: `--project`; else, when the site is known and `projects` names exactly one `<site>/<KEY>` for it, that key; else, when the site is unknown and `projects` names exactly one entry, that entry (and its site); else exit 2 `missing_option` naming `--project`. A site still unknown after the project is known is resolved with `ticketctl sites resolve <PROJECT>-1 --json` (offline; it applies ticketctl's own rules including the only-site rule; the number is a placeholder); several candidates exit 21 `ambiguous` with the site names. Type: `--type`, else `projects.<site>/<KEY>.default_type`, else none. Repo: `--repo`, then `projects.<site>/<KEY>.repo`, then the cwd's `origin` remote, then none. The repo is a claude-session repo id: lowercase host, a non-default port only, then the path (`host/<full project path>`), derived from the `origin` URL by stripping the scheme, `user@`, a default port and a trailing `.git` (the scp form `git@host:path` becomes `host/path`); a URL that does not give a valid id means no repo. `--repo` and the config values must already be an id. Check the siblings against the pinned minimums (exit 12 `tool_missing` or `tool_too_old`, naming the install command), run the skill preflight, and refuse a headless draft with no seed (exit 2 `missing_seed`). An interactive draft with no terminal on stdin and stdout exits 2 `no_terminal`.
 
@@ -188,7 +196,7 @@ def find_agent(row):
 4. **Prompt file.** Write the prompt file (see Prompt file) with mode 0600 under the state directory's `prompts/`, created `O_CREAT|O_EXCL|O_NOFOLLOW` with a random name, and, when a template applies, the template as a trusted input: it is copied to a private file named `template.md` in a mode 0700 directory under `tmp/` (read through the reader, cap 256 KiB) and that copy is passed as `--input-file`; the directory is deleted when the run ends. A resume passes no input; the earlier run's copy stays readable at its old path.
 5. **Kind check.** Run `agent-spawn launch --dry-run --json` with the final flags and no `--result-file`, and require exit 0, `agent_settings.kind == "draft-ticket"`, `reads_third_party == false`, `would_refuse == null`, an empty top-level `warnings` and an empty `session_plan.warnings` and `session_plan.profile.fallback` not true (a misspelled kind exits 0 with only those signals). `session_plan.profile.mcp` is read; a value `inherit` is the warning `mcp_inherited` (not a failure; the bundled profile denies `mcp__*`).
 6. **Launch.** Snapshot the terminal (termios) and run `agent-spawn launch` (see Session launch) with a fresh `--result-file` path under `results/`. Restore the terminal in a `finally` (see Prompt and terminal rules).
-7. **Outcome.** Read the result (see Session launch for the headless reading). The result is unusable when the file is missing, is not JSON, has `dry_run` or has `run: null`; then find the agent with `find_agent` (Gate) and read `agent-spawn show <agent_id> --json` instead. Map the outcome with the Session outcomes table. On `done`, read the frozen artifact with the Artifact reader and validate it against the Slot contract.
+7. **Outcome.** Read the result (see Session launch for the headless reading). The result is unusable when the file is missing, is not JSON, has `dry_run` or has `run: null`; then find the agent with `find_agent` (Gate) and read `agent-spawn show <agent_id> --json` instead (a lookup error exits 12 `lower_failed` and the row stays `drafting`, an orphan). Map the outcome with the Session outcomes table. On `done`, read the frozen artifact with the Artifact reader and validate it against the Slot contract.
 8. **Store.** On a valid artifact apply T5 and tear the agent down with `agent-spawn teardown <agent_id>`; a failed teardown after a valid artifact is stored is a warning, the draft stays `ready`, and `prune` and `discard` retry it. On any other outcome apply the table (T6; the agent stays parked). Delete the prompt file and the result file.
 9. **Finish.** Run the post-draft duplicate check (see Prefetch), the `post-draft` hook and the audit record, print the result and offer the review as the `draft` text says.
 
@@ -205,6 +213,7 @@ draft --continue DRAFT_ID [--mode M]:
     A veto or escalation changes nothing (exit 11 or 13).
  2. Adopt (only a `drafting` orphan whose agent is parked):
     run = last run of agent_spawn_show(agent_id)
+    origin of the draft: if run.mode == "headless" the origin becomes headless; the mode is read from the run's record, never from this call's --mode
     if run.outcome == "done" and run.report and not run.report.implicit:
         run Draft order steps 7 to 9 on this run (artifact reader checks run_token == row.run_token);
         if the artifact reads valid: T5, done, no new run.
@@ -238,33 +247,54 @@ Resume flags (all passed every time so safety does not depend on the carried val
 
 ```text
 def create(draft_id, flags):
-    if not human_present():                      # /dev/tty opens; skipped by --dry-run
-        exit(13, "needs_human")
-    if actor is auto and not dry_run: exit(2, "human_only")
-    row, lease = enter(draft_id, "create")        # Gate; --dry-run takes no lease
-    ctx = Context(attempts_this_call=[], sprint_ran=False, accepted=False, workdir=None, exit=None)
+    install_signal_handlers()                    # first, before the gate: SIGINT, SIGHUP, SIGTERM raise ExitRequest(130, 129, 143)
+    ctx = Context(audit_open=[], sprint_ran=False, sprint_step=None, accepted=False, workdir=None, exit=None,
+                  write_may_have_landed=False, last_create_attempt=None, pending_signal=None)
+    row = lease = None
     try:
-        run_steps(row, flags, ctx)                # steps below; sets ctx.exit, may return early
+        if not human_present():                  # /dev/tty opens; skipped by --dry-run
+            exit(13, "needs_human")
+        if actor is auto and not dry_run: exit(2, "human_only")
+        row, lease = enter(draft_id, "create")   # Gate; --dry-run takes no lease
+        run_steps(row, flags, ctx)               # steps below; sets ctx.exit, may return early
     except ExitRequest as e:
-        ctx.exit = e                              # every `exit(...)` inside run_steps raises this
+        ctx.exit = e                             # every `exit(...)` and every signal handler raises this
     except BaseException as e:
         ctx.exit = internal_error(e)
     finally:
-        finish(row, lease, ctx)                   # the single place for every exit
-    sys.exit(ctx.exit.code)
+        finish(row, lease, ctx)                  # the single place for every exit
+    sys.exit(final_code(ctx))
+
+def final_code(ctx):
+    if ctx.write_may_have_landed:                # a write call (ticketctl create --yes or sprint add --yes) was started
+        return ctx.exit.code                     # and did not definitely write nothing: always the mapped result of the write
+                                                 # (0, 12 partial, 12 unavailable with details.key, 12 outcome_unknown, ...);
+                                                 # a signal that arrived meanwhile never changes it
+    return ctx.pending_signal.code if ctx.pending_signal else ctx.exit.code
+
+def begin_write(ctx, attempt_id):                # step 6 and the sprint step call it right after their `attempted` record
+    ignore_signals_but_remember(ctx)             # SIGINT, SIGTERM, SIGHUP only set ctx.pending_signal from here on
+    ctx.audit_open.append(attempt_id)            # every opened `attempted` record, create and sprint add alike
+
+def end_write(ctx):                              # the call definitely wrote nothing (a refused transaction, exit 13 escalated,
+    ctx.write_may_have_landed = False            # a definite failure of a call that creates): signals work again
+    restore_raising_handlers()
+    if ctx.pending_signal: raise ExitRequest(ctx.pending_signal)
 
 def finish(row, lease, ctx):                      # never raises; each part is independent
+    ignore_signals_but_remember(ctx)              # from here on no signal can skip a part
     delete_dir(ctx.workdir)                       # also deleted when step 3 builds a new one
-    for a in ctx.attempts_this_call:
-        if not a.outcome_audited: audit_outcome(a)          # pairs every `attempted` record
-    if ctx.attempts_this_call or ctx.sprint_ran or ctx.accepted:
+    for id in ctx.audit_open:
+        if not audited_outcome(id): audit_outcome(id, best_known_outcome(id))   # pairs every `attempted` record; `unknown` when the
+                                                  # answer is not known, `failed` (code `not_sent`) when the call never started
+    if ctx.audit_open or ctx.sprint_ran or ctx.accepted:
         run_hook("post-create", result=post_create_result(ctx))   # exactly once; failure of the hook is logged only
     release_lease(lease)                          # compare-and-set on the lease token; last
     write_result_file_and_output(ctx)             # --json / --result-file, whatever the exit code
 
 def post_create_result(ctx):
-    last = ctx.attempts_this_call[-1] if ctx.attempts_this_call else None
-    sprint_failed = ctx.sprint_ran and row.sprint.step == "failed"
+    last = ctx.last_create_attempt                # the attempt of this call's ticketctl create call, or None
+    sprint_failed = ctx.sprint_ran and ctx.sprint_step == "failed"     # the sprint step sets ctx.sprint_step as well as the row
     if last is None:                              # sprint-only run or accept without an attempt
         return "partial" if sprint_failed else ("reused" if ctx.accepted else "created")
     if last.outcome in ("created", "reused"):
@@ -280,9 +310,10 @@ def run_steps(row, flags, ctx):
     # 5. Review: save the overrides given by this call (the prompt was reached, so a decline saves them too); draw the screen;
     #    read one answer. `e` edits and returns to 3; `v` shows the cut items; ready+y (no item cut) goes to 6;
     #    `accept` (state already_created) goes to 6a; any other answer exits 20 declined.
-    # 6. Write: check the file digests; one transaction (compare-and-set on the lease token): generation, attempt (outcome unknown),
-    #    status unknown, and under --again clear created_key, created_url and reset sprint; audit `attempted`; call ticketctl create --yes;
-    #    outcome rule and Lower tool exits; on escalated, the escalation question.
+    # 6. Write: check the file digests; write the audit `attempted` record (a failure exits 1 before any state change); begin_write;
+    #    one transaction (compare-and-set on the lease token): generation, attempt (outcome unknown), status unknown, and under
+    #    --again clear created_key, created_url and reset sprint; then ctx.write_may_have_landed = True and call ticketctl create --yes;
+    #    outcome rule and Lower tool exits (end_write for an answer that wrote nothing); on escalated, the escalation question.
     # 6a. Accept: the `accept` function of Screen state; it ends in step 7.
     # 7. Sprint: when a sprint is chosen and the ticket exists (after 6, 6a or a sprint-only run): the Sprint step.
     # 8. Return; `finish` prints the key and URL.
@@ -295,15 +326,15 @@ def run_steps(row, flags, ctx):
 3. **Plan.** Create a fresh work directory under `tmp/` (mode 0700, random name) and write the title, the body and every field value into it, one file each, mode 0600, `O_EXCL`, and remember the sha256 of each file. Run `ticketctl create --dry-run --json --actor human:<user> --site=S --project=P --type=T --title-file=F --body-file=B` with `--parent=`, `--assign=`, `--label=`, `--set=NAME=@FILE` and `--dedupe-key=KEY`, each only when set. Values were checked when stored or parsed; a stored value that fails its grammar at this point is exit 1 `internal`. Derive the screen state from the answer (Dedupe key and attempts). Everything the screen shows comes from the plan (`changes[]` and `steps`) where the plan carries it, and from the draft otherwise. The body shown is the `to` member of the plan's `changes[]` entry named `description`. It must be a string (ticketctl's Markdown rendering of the final text, attribution paragraph included). If it is not a string, or the entry is missing, `create` exits 12 `lower_failed` (the screen cannot show what would be sent) and nothing is written.
 4. **Duplicates.** Run the near-duplicate search on the final title on the first round and again only when the title changed; hits are warnings.
 5. **Review.** Save the overrides given by this call, show the screen, read one answer. `e` edits (Editor), saves the new text to the draft and returns to step 3 with new files. `v` shows the cut items (Review screen). A `blocked` state offers only `e`. A `ready` `y` goes to step 6 (it is refused while any item is cut); `accept` on the `already_created` state goes to step 6a; any other answer ends as the state table says.
-6. **Write.** Check that the sha256 of every file in the work directory still equals the remembered value (a difference exits 1 with `reason: input_changed` and sends nothing). In one transaction on the lease token (T10) insert the attempt (outcome `unknown`), set the generation, set the status `unknown` and, under `--again`, clear `created_key` and `created_url` and reset `sprint`. Write the audit `attempted` record. Run `ticketctl create --yes --expect-plan HASH --dedupe-key KEY --actor human:<user>` with the same arguments and files as step 3, then apply the outcome rule and the Lower tool exits table. `escalated` runs the escalation question. The audit outcome record is written by the finish step.
+6. **Write.** Check that the sha256 of every file in the work directory still equals the remembered value (a difference exits 1 with `reason: input_changed` and sends nothing). Write the audit `attempted` record first (a failure to write it exits 1 before any state change and before any ticketctl call, so a draft is never `unknown` for a call that was not sent) and run `begin_write` (signals are deferred from here on). In one transaction on the lease token (T10) insert the attempt (outcome `unknown`), set the generation, set the status `unknown` and, under `--again`, clear `created_key` and `created_url` and reset `sprint`; a refused transaction (lost lease) exits 12 `unavailable` through `end_write` with nothing sent. Then run `ticketctl create --yes --expect-plan HASH --dedupe-key KEY --actor human:<user>` with the same arguments and files as step 3, then apply the outcome rule and the Lower tool exits table. `escalated` runs the escalation question. The audit outcome record is written by the finish step. A crash between the `attempted` record and T10 leaves an `attempted` record with no outcome and a draft that is unchanged: nothing was sent.
 
    6a. **Accept.** Run the `accept` function of Screen state (T15); it ends in step 7.
 7. **Sprint.** If a sprint was chosen and the ticket exists, run the Sprint step; a failure sets `sprint_failed`, keeps the key and exits 12 `partial` with the key in the result.
-8. **Return.** `finish` (above) writes the audit outcome records, runs `post-create`, deletes the work directory, releases the lease and prints the key and URL.
+8. **Return.** `finish` (above) writes the audit outcome records (one for every `attempted` record this call opened, create and sprint add), runs `post-create`, deletes the work directory, releases the lease and prints the key and URL. The exit code is `final_code`: the write's mapped result whenever a write call may have landed, else the deferred signal's code, else the step's own exit.
 
 **What the plan hash covers.** ticketctl's hash covers the action, site, project, assign target, field names with value hashes, body hashes, labels, sprint id and dedupe key. It does not state that it covers the title, the type or the parent. ticket-create does not rely on it for those: it renders them from the dry-run plan and it checks the file digests of step 6, which narrows the window between the check and ticketctl's read.
 
-**Escalation.** When ticketctl exits 13 `escalated` after the human's yes, the attempt is `failed` (nothing was written). Show the hook names and the sanitized reason (as a model-free note: ticketctl's hook text is untrusted), keep the draft and ask a second question on the same prompt rules: `A hook asked for review (NAMES). Override and create? [y/N]`. On yes run the same call again with `--override-escalation=ticketctl` and one `--decision-id` per id ticketctl returned, as a new attempt with the same key; the audit records `override_escalation: ticketctl`. Any other answer ends with exit 13 `escalated` and the draft unchanged. The same question covers `pre-sprint`.
+**Escalation.** When ticketctl exits 13 `escalated` after the human's yes, the attempt is `failed` (nothing was written). Show the hook names (an item `hooks` in the gutter zone, quoted) and the sanitized reason (ticketctl's hook text is untrusted), keep the draft and ask a second question on the same prompt rules: `A hook asked for review. Override and create? [y/N]` (no name in the prompt line, so the line has a fixed length). On yes run the same call again with `--override-escalation=ticketctl` and one `--decision-id` per id ticketctl returned, as a new attempt with the same key; the audit records `override_escalation: ticketctl`. Any other answer ends with exit 13 `escalated` and the draft unchanged. The same question covers `pre-sprint`.
 
 **Edits that are not a dry-run problem.** A body that fails ticketctl's validation is `blocked`; `e` edits it and the loop returns to step 3. Fields that fail are fixed with `--set NAME=VALUE` (or `--set NAME=` to drop a model-written field from the draft) on the next `create`.
 
@@ -395,10 +426,10 @@ Output: the skill writes `draft.json` directly inside `$CSESSION_DIR/artifacts/`
 | `parent` | string or null | `^[A-Z][A-Z0-9_]{0,31}-[0-9]{1,12}$` |
 | `labels` | array of string | at most 20; each `^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$` |
 | `assignee` | string or null | `me`, `none` or `^[A-Za-z0-9][A-Za-z0-9:_.-]{0,127}$` |
-| `fields` | object | at most 20 entries; name `^[A-Za-z][A-Za-z0-9 _.-]{0,99}$` and not (case-insensitively) `title`, `summary`, `description`, `labels`, `assignee`, `parent`, `sprint`, `resolution` or `reporter` (`artifact_invalid`, detail `field`); value a string of at most 8192 characters, a finite number whose decimal form matches `^-?[0-9]+(\.[0-9]+)?$` (booleans, exponent forms and non-finite values are `artifact_invalid`), or an array of at most 50 strings |
+| `fields` | object | at most 20 entries; name `^[A-Za-z][A-Za-z0-9 _.-]{0,99}$` and not (case-insensitively) `title`, `summary`, `description`, `labels`, `assignee`, `parent`, `epic`, `sprint`, `resolution` or `reporter` (`artifact_invalid`, detail `field`; `epic` is ticketctl's logical name that sets the parent, so a `fields` entry could otherwise replace the fixed `--parent`); value a string of at most 8192 characters, a finite number whose decimal form matches `^-?[0-9]+(\.[0-9]+)?$` (booleans, exponent forms and non-finite values are `artifact_invalid`), or an array of at most 50 strings |
 | `notes` | string | at most 4096 characters; shown to the human |
 
-`parent`, `labels`, `assignee`, `fields` and `notes` may be omitted. An assignee that is an account id (not `me` or `none`) gets the warning `assignee_account` on the review screen. Every model-derived value is passed in the attached form: `--type=T`, `--parent=KEY`, `--assign=VALUE`, `--label=L`, `--set=NAME=@FILE`; no model-derived value begins with `-`. Title, body and field values only ever travel in files. Field files hold a string verbatim, a number as its canonical decimal and an array as a JSON array of strings.
+The fixed-value protection of Overview covers the dedicated keys only; the reserved names above close ticketctl's own aliases of them (`epic` for `parent`). `parent`, `labels`, `assignee`, `fields` and `notes` may be omitted. An assignee that is an account id (not `me` or `none`) gets the warning `assignee_account` on the review screen. Every model-derived value is passed in the attached form: `--type=T`, `--parent=KEY`, `--assign=VALUE`, `--label=L`, `--set=NAME=@FILE`; no model-derived value begins with `-`. Title, body and field values only ever travel in files. Field files hold a string verbatim, a number as its canonical decimal and an array as a JSON array of strings.
 
 A skill's `done` report must attach this artifact. A missing, wrong or unreadable artifact is exit 22; the draft's text is never trusted beyond these checks, and the human reviews every field before anything is sent.
 
@@ -411,11 +442,12 @@ One reader opens every untrusted file (the frozen artifact, the template, a `--i
 `create` shows the screen on `/dev/tty`. No pager is used.
 
 ```text
-Screen = items (the gutter zone) + facts (one row each) + prompt. R rows and C columns come from TIOCGWINSZ; unknown or non-positive values give 24 and 80.
+Screen = items (the gutter zone) + facts (one row each) + prompt. R rows and C columns come from TIOCGWINSZ and are read again before every draw and before an answer is accepted; unknown or non-positive values give 24 and 80.
+Width rule, used for every width on the screen (fold, facts clip, viewer, cut marker): a code point counts 1 cell when it is printable ASCII (U+0020 to U+007E) and 2 cells otherwise, whatever its script, class or combining property. No width table is used. No terminal advances more than 2 cells for one code point, so the counted width is never smaller than the real one.
 If C < 40 the screen prints "terminal too narrow: 40 columns needed" and offers only cancel and e.
 
 def render(state, plan, draft, R, C):
-    W = C - 4                                   # "│ " gutter plus 2 cells of slack for width-table differences
+    W = C - 3                                   # "│ " gutter plus one spare cell; widths by the width rule
     items = []                                  # model- or provider-written text only, fixed order
     items += [Item("title", draft.title)]
     items += [Item("body", plan.change("description").to)]      # as ticketctl will send it, attribution paragraph included
@@ -423,40 +455,46 @@ def render(state, plan, draft, R, C):
     for name, value in draft.fields:  items += [Item("field " + name, text(value))]
     if draft.ticket_labels: items += [Item("labels", ", ".join(draft.ticket_labels))]
     if draft.assignee not in (None, "me", "none"): items += [Item("assignee", draft.assignee)]
-    for w in draft.warnings: items += [Item("suggested " + w.field, w.value)]
+    for w in draft.warnings: items += [Item("suggested " + w.field, suggestion(w, draft.seed))]   # see the rules below
     if sprint: items += [Item("sprint", sprint.name)]
     if state.existing_ticket: items += [Item("existing ticket", type + ": " + title)]
     if state.provider_text: items += [Item("reason", provider_text + hint_for(state.reason))]   # blocked and escalation screens
+    if state.hook_names: items += [Item("hooks", quoted(state.hook_names))]                       # escalation screens
     if duplicates: items += [Item("possible duplicates", "\n".join(duplicates))]
-    facts = build_facts(...)                    # one row per fact, each clipped to C-1 cells with "<...>"; never folded
+    facts = build_facts(...)                    # one row per fact, each clipped to C-1 cells (width rule) with "<...>"; never folded
     F = len(facts)
-    B = R - F - 1 - 1                           # gutter rows: minus the facts, the prompt row and one spare row
+    P = prompt_rows(state, C)                   # rows of the closed prompt line at C columns (ASCII, 1 cell each, wrapped)
+    B = R - F - P - 1                           # gutter rows: minus the facts, the prompt rows and one spare row
     for it in items:
-        it.rows = fold(it.text_with_label, W)   # tab -> one space; newline starts a row; width: East Asian W/F = 2, combining = 0, else 1;
+        it.rows = fold(it.text_with_label, W)   # tab -> one space; newline starts a row; widths by the width rule;
                                                 # a code point is never split; every row carries the "│ " prefix
     full  = [len(it.rows) for it in items]
     floor = [min(f, 2) for f in full]           # a cut item shows one text row and one marker row
     if sum(floor) > B:
-        refuse("terminal too small: %d rows needed" % (sum(floor) + F + 2))     # offers only e and cancel; y is not offered
+        refuse("terminal too small: %d rows needed" % (sum(floor) + F + P + 1))     # offers only e and cancel; y is not offered
     alloc, spare = floor[:], B - sum(floor)
     while spare > 0 and any(a < f for a, f in zip(alloc, full)):                # one row at a time, in item order
         for i in range(len(items)):
             if spare > 0 and alloc[i] < full[i]: alloc[i] += 1; spare -= 1
-    write("ESC[?7l")                            # autowrap off for the whole draw; restored with ESC[?7h in the terminal finally
+    write("ESC[?7l")                            # autowrap off while items and facts are drawn
     for it, a, f in zip(items, alloc, full):
         if a == f: draw(it.rows)
-        else:      draw(it.rows[:a-1]); draw_marker("[... %d more characters; sha256 %s]" % (chars_hidden(it, a-1), sha12(it.text)))
-    draw(facts); draw(prompt_line(state))
+        else:      draw(it.rows[:a-1]); draw_marker(clip("[... %d more characters; sha256 %s]" % (chars_hidden(it, a-1), sha12(it.text)), W))
+    draw(facts)
+    write("ESC[?7h"); draw(prompt_line(state))   # the prompt is closed text: wrapping is safe and the whole line stays readable;
+                                                 # the terminal finally also turns autowrap on
 ```
 
 Rules that follow:
 
 - Facts rows (closed): `site`, `project`, `repo`, `type` (quoted, `"` and `\` escaped), `parent`, `assignee` (`me`, `none` or `account id (see above)`), `labels: N`, `fields: N`, `sprint: id N board "B"` (quoted), `origin`, `overridden`, `warnings` (codes with counts), `plan` (hash), `title: "..."` (quoted and clipped to one row, `"` and `\` escaped, with the length in characters) and, when `generation` is above 0, `earlier attempts: N (KEYS)` (the ticket keys of earlier generations and the count of earlier unknown attempts). The full title is the first gutter item. F is the number of rows present (at most 15).
-- A cut item always ends with the marker; the marker's 12-hex digest is the start of the item's sha256; a cut body is read in full with `e`, any field with `show DRAFT_ID --field NAME`, and every cut item with `v`.
-- `gutter(text)` is the one function that prints provider, hook and model text on every screen (create, blocked, escalation, sprint-only, `already_created`): such text is never printed outside the zone, and every prompt line holds closed text only: `Create this ticket? [y/N]`, `K item(s) are cut. v shows them in full, e edits, anything else cancels:`, `Cannot create (see above). e edits the title and body; anything else stops:`, `A hook asked for review (NAMES). Override and create? [y/N]` (NAMES from the user's own hook config, quoted), the `already_created` lines of Screen state, `Add KEY to sprint? [y/N]`.
+- A cut item always ends with the marker; the marker row is clipped to W cells by the width rule and is never folded (it starts with `[... N more`, which stays visible at every C of 40 or more); the marker's 12-hex digest is the start of the item's sha256; a cut body is read in full with `e`, any field with `show DRAFT_ID --field NAME`, and every cut item with `v`.
+- `gutter(text)` is the one function that prints provider, hook and model text on every screen (create, blocked, escalation, sprint-only, `already_created`): such text is never printed outside the zone, and every prompt line holds closed text only: `Create this ticket? [y/N]`, `K item(s) are cut. v shows them in full, e edits, anything else cancels:`, `Cannot create (see above). e edits the title and body; anything else stops:`, `A hook asked for review. Override and create? [y/N]` (the hook names are a gutter item), the `already_created` lines of Screen state, `Add KEY to sprint? [y/N]`.
 - Blocked hints (closed text appended to the `reason` item): `missing_required_fields`: "pass --set NAME=VALUE for each required field"; `invalid_value`, unknown type: "pass --type with one of the allowed types"; parent not found: "pass --parent"; board not found: "pass --board"; `unknown_field`, `invalid_combination`, `ambiguous_field`: "remove or rename the field with --set NAME="; `body_too_large`, `empty_body`, `node_not_allowed`, `secret_in_body`: "press e to edit the body". `e` is always offered.
 - The facts rows and the prompt are drawn last, so nothing in the gutter zone can appear below them.
-- While any item is cut, `y` is refused. The prompt is `K item(s) are cut. v shows them in full, e edits, anything else cancels:`. `v` prints each cut item in full through the same fold, in pages of R - 2 rows with `Enter` for the next page and `q` to stop; after the last page of every cut item the screen is drawn again with the normal prompt and `y` is accepted until the next edit or override. `q` stops the viewer and draws the screen again with the same cut prompt (items not shown stay unseen).
+- `suggestion(w, seed)` is the text of a suggested value: `type` and `parent` give the stored value, or `none` when it is null; `ticket_labels` gives the stored joined list, or, when it is null (the artifact had no labels), the word `omitted`, a space and the fixed labels of `seed` joined with a comma and a space. The stored value is never cut by a schema limit; only the screen's allocator cuts it, with the marker.
+- Width test: a pseudo-terminal test measures the cursor advance of every code point that the sanitizer leaves alone (to U+10FFFF) and asserts that the advance is at most the width rule's count for that code point; it also draws a row of a base letter followed by 8 marks of each code point whose advance is 2 and checks that every row of the screen fits in C cells and no tail is hidden.
+- While any item is cut, `y` is refused. The prompt is `K item(s) are cut. v shows them in full, e edits, anything else cancels:`. `v` prints each cut item in full through the same fold and width rule, in pages of `max(R - 2, 3)` rows with `Enter` for the next page and `q` to stop; it refuses with "terminal too small" when R is below 5. The screen keeps a set `seen` of the sha256 of the text of every item whose last row the viewer has printed; an item counts as seen only then, so `q` before the last page leaves it unseen. After the viewer ends the screen is drawn again. `y` is offered, with the normal prompt, only when every item cut at this draw is in `seen`; `seen` is cleared on `e`, on an override and on any change of R or C (read before each draw and again before an answer is accepted: when either changed since the draw, the screen is drawn again and the answer is discarded, so a `y` typed against a stale screen sends nothing). `q` draws the screen again with the same cut prompt (items not shown stay unseen).
 
 ## Prompt and terminal rules
 
@@ -464,7 +502,7 @@ Rules that follow:
 - **Prompt.** The confirmation reads one line from `/dev/tty` after forcing canonical mode, echo and signal generation, and flushing pending input with `tcflush(fd, TCIFLUSH)` before and again after the read. Only `y` or `yes` (trimmed, case-insensitive) accepts. EOF, an over-long line (over 64 characters), pending extra input, a partial line and a bracketed paste decline; Ctrl-C ends the call with exit 130 and changes nothing. The same prompt serves every yes-or-no question in the tool.
 - **Restore.** Before launching the session, the editor or any child that uses the terminal, ticket-create takes a termios snapshot of `/dev/tty`. In a `finally` it restores it with `tcsetattr(TCSAFLUSH, snapshot)` and writes the reset sequence that turns off bracketed paste, mouse tracking and the alternate screen, shows the cursor and turns autowrap back on (`ESC [ ? 7 h`). This happens on every exit, including a signal-killed child.
 - **Cooked output.** Everything untrusted that is printed passes the Output sanitizing rule first.
-- **Signals.** Before the launch call starts, SIGINT, SIGTERM or SIGHUP end the call with 130, 143 or 129 and delete a new draft's row. While `launch` or `resume` runs, ticket-create ignores SIGINT (the session owns the terminal) and forwards SIGTERM and SIGHUP to the agent-spawn child, waits for it and maps its exit; the draft is stored by the outcome rules, or stays `drafting` (an orphan) if ticket-create itself dies. During `ticketctl create --yes` and `sprint add --yes` it ignores all three signals until the child ends, then runs the single finish of the Create order and exits 130, 129 or 143.
+- **Signals.** `draft` and `create` install handlers for SIGINT, SIGHUP and SIGTERM first, before the gate and before any lease, that raise a signal exit (130, 129, 143), so every `finally` runs: the terminal restore, the work directory removal, `finish` and the lease release. Without the handlers Python's default ends the process at once and leaves the lease, the work directory (the title and body in clear under `tmp/`) and no audit record. Ctrl-C at a prompt is the same exit 130 (never exit 1). Before the launch call starts, a signal ends the call and deletes a new draft's row. While `launch` or `resume` runs, ticket-create ignores SIGINT (the session owns the terminal) and forwards SIGTERM and SIGHUP to the agent-spawn child, waits for it and maps its exit; the draft is stored by the outcome rules, or stays `drafting` (an orphan) if ticket-create itself dies. The editor child is handled the same way. From the audit `attempted` record of a write call (`ticketctl create --yes` or `sprint add --yes`) until the end of `finish`, the three signals are ignored and remembered (`begin_write`, `end_write` and `finish` of the Create order); no signal can skip a part of `finish`, so a second Ctrl-C during the 30-second `post-create` hook cannot skip the lease release or the result file. The exit code is the write's mapped result whenever a write call may have landed (a call that created a ticket never exits 130, 129 or 143, whatever signal arrived; the exit codes 129, 130 and 143 mean that nothing was written), and otherwise the code of the remembered signal. A write call whose answer is definitely "nothing written" (an `escalated` answer, a refused transaction) ends the deferral and raises a remembered signal at once.
 
 ## Editor
 
@@ -526,7 +564,7 @@ def accept(row, state, ctx):                      # only `accept` in full (never
 
 `--sprint open|next|ID` (id grammar `^[0-9]{1,18}$`) and `--board ID|NAME` are accepted on `create`; the selector, the resolved id and name, and the board are stored in the draft's `sprint`. Resolution uses ticketctl's rules, with `--site` and `--project` (and the stored board): `open` is the single `active` sprint of `ticketctl sprints list --state active` (none: exit 20 `no_sprint`; several: exit 21 with the candidates); `next` is the `future` sprint with the earliest non-null `start`, else the lowest id (none: exit 20 `no_sprint`); `next` needs every `future` sprint, so the `sprints list` call passes `--limit 500`; an id is read with `ticketctl sprints show ID` and a `closed` sprint exits 20 `sprint_closed`. `--board` takes an id or a name.
 
-**After a create.** Once the ticket exists the step runs `ticketctl sprint add KEY --sprint ID --site S [--board B] --actor human:<user> --dry-run`, then with `--yes --expect-plan HASH2`; the human's yes on the create screen covers it because the sprint was on the screen. `unchanged` is success. `stale_ticket` is re-planned once. Any other answer (veto, escalation unanswered, rejected, closed sprint, unknown outcome) sets `sprint_failed`, keeps `created_key`, and exits 12 `partial` with the key and ticketctl's reason in `details`; an escalation asks the escalation question first. The `sprint.step` values are `none`, `pending`, `done` and `failed`. T11 sets `pending` in the same transaction as `created_key` when a sprint was requested; the step ends `done` or `failed`. A process that dies after T11 leaves `pending`, which `rest_status` reads as `sprint_failed`, and `create DRAFT_ID` then runs the sprint-only step.
+**After a create.** Once the ticket exists the step runs `ticketctl sprint add KEY --sprint ID --site S [--board B] --actor human:<user> --dry-run`, then with `--yes --expect-plan HASH2`; the human's yes on the create screen covers it because the sprint was on the screen. Before the `--yes` call the step writes its audit `attempted` record (with an `attempt_id` of ticket-create's own, no attempt object) and runs `begin_write`; it sets `ctx.sprint_ran` and, when it ends, `ctx.sprint_step` (`done` or `failed`), which `post-create` reads; `finish` closes the `attempted` record with `done`, `failed` or, when the answer is unknown, `unknown`. `unchanged` is success. `stale_ticket` is re-planned once. Any other answer (veto, escalation unanswered, rejected, closed sprint, unknown outcome) sets `sprint_failed`, keeps `created_key`, and exits 12 `partial` with the key and ticketctl's reason in `details`; an escalation asks the escalation question first. The `sprint.step` values are `none`, `pending`, `done` and `failed`. T11 sets `pending` in the same transaction as `created_key` when a sprint was requested; the step ends `done` or `failed`. A process that dies after T11 leaves `pending`, which `rest_status` reads as `sprint_failed`, and `create DRAFT_ID` then runs the sprint-only step.
 
 **Sprint-only run.** `create DRAFT_ID --sprint S` on a `created` draft, or `create DRAFT_ID` on a `sprint_failed` draft (the stored sprint is used unless `--sprint` is given), runs only this step and needs a human. It accepts only `--sprint`, `--board`, `--site`, `--project` (equal to the stored value), `--dry-run` and the global flags; any other `create` flag exits 2 `invalid_combination`; `--board` without a sprint uses the stored sprint. It resolves the sprint, runs the `sprint add` dry-run, and shows a short screen drawn like the review screen: the facts hold the ticket key, the sprint id and the plan hash, and the gutter zone holds the URL, the sprint name, the board and ticketctl's warnings (for example `sprint_moved`), with the prompt `Add KEY to sprint? [y/N]`. A plan with empty `steps` (the ticket is already in the sprint) records `done` with no prompt and exits 0. Only `y` or `yes` runs `--yes --expect-plan`. Declining leaves the status unchanged (exit 20 `declined`). The sprint step is recorded in `sprint.step`, never as an attempt.
 
@@ -564,9 +602,9 @@ Exit 13 escalates and any other non-zero exit vetoes (exit 11) for `pre-draft`; 
 | 20 | `refused` | `declined`, `draft_not_ready`, `draft_not_resumable`, `already_created`, `live`, `sprint_closed`, `no_sprint`, `attempt_recorded` | by reason |
 | 21 | `ambiguous_draft`, `ambiguous` | null | a prefix (`details.candidates`), or a site, board or sprint |
 | 22 | `artifact_missing`, `artifact_invalid`, `invalid_ticket_input`, `missing_required_fields` | the same word | the draft's content is missing or invalid; `invalid_ticket_input` is ticketctl's own validation on a dry-run (`details.lower_error`) |
-| 129, 130, 143 | `usage` or none | null | SIGHUP, SIGINT or SIGTERM outside a session run (see Signals in Prompt and terminal rules); 130 is also Ctrl-C at a prompt (nothing changed) |
+| 129, 130, 143 | `usage` or none | null | SIGHUP, SIGINT or SIGTERM outside a session run when no write call may have landed (see Signals in Prompt and terminal rules); 130 is also Ctrl-C at a prompt (nothing changed). After a write call that may have landed the exit code is the write's, never one of these |
 
-`details` keys are closed: `candidates`, `required_fields`, `existing_key`, `plan`, `attempt`, `lower_error`, `hook`, `hook_stderr`, `key`, `step`, `tool`, `minimum`, `found`, `install`, `config_key`. Warning codes are closed: `duplicate_candidates`, `body_near_limit`, `body_differs`, `existing_differs`, `previous_attempt_unknown`, `plan_differs`, `fixed_field_changed`, `assignee_account`, `form_facts_unavailable`, `credential_env_empty`, `mcp_inherited` and `skill_unchecked` (from `validate`, the kind check and the preflight), plus ticketctl's plan warning codes passed through; `body_near_limit` is ticketctl's (above 90 percent of its limit). Signals are described in Prompt and terminal rules.
+`details` keys are closed: `candidates`, `required_fields`, `existing_key`, `plan`, `attempt`, `lower_error`, `hook`, `hook_stderr`, `key`, `step`, `tool`, `minimum`, `found`, `install`, `config_key`. Warning codes are closed: `duplicate_candidates`, `body_near_limit`, `body_differs`, `existing_differs`, `previous_attempt_unknown`, `plan_differs`, `fixed_field_changed`, `assignee_account`, `form_facts_unavailable`, `credential_env_empty`, `mcp_inherited`, `profile_missing_deny` and `skill_unchecked` (from `validate`, the kind check and the preflight), plus ticketctl's plan warning codes passed through; `body_near_limit` is ticketctl's (above 90 percent of its limit). Signals are described in Prompt and terminal rules.
 
 ## Lower tool exits
 
@@ -595,6 +633,7 @@ Exit 13 escalates and any other non-zero exit vetoes (exit 11) for `pre-draft`; 
 | `agent-spawn launch`, `resume` | 0, 13 to 18 | the Session outcomes table (an exit 13 with `phase: launch` and no run is below) | none |
 | | 22 | cannot happen (no `--wait-timeout`) | none |
 | | any exit that produced no run | the pre-run error rule of the Draft order, mapped as the next table | none |
+| `agent-spawn show`, `list` (the agent lookup of Gate) | any failure other than exit 10 for a stored id, or two or more label hits | exit 12 `lower_failed` (`prune`: the draft is skipped, `list`: agent `unknown`); never read as no agent | none |
 
 An error before any run produced a session (agent-spawn ending a launch or resume with no run, or the kind check) maps as follows.
 
@@ -615,7 +654,7 @@ With `--json`, exit 0 prints the command's result object; an exit that adopted a
 
 ## Output sanitizing
 
-Every untrusted string that leaves the process (human output, `--json` values, hook payload strings, logs) passes one sanitizer. It replaces C0 controls except newline and tab, DEL, C1 controls, bidirectional and isolate controls, zero-width and other format characters, the tag-character block, surrogates, private-use and unassigned code points, U+2028 and U+2029, non-space separators and variation selectors with `<U+XXXX>` markers, and also U+034F, U+115F, U+1160, U+16FE4, U+17B4, U+17B5, U+180B to U+180F, U+2800, U+3164, U+FFA0 and U+FFFC (so shown text equals the text ticketctl sends). It caps runs of combining marks at 8 and, for non-screen output (hook and log text), truncates lines over 200 characters with `<...>`. Terminal output of model text follows the Review screen's layout rule instead of the truncation. The sanitizer is applied once, at the point of output.
+Every untrusted string that leaves the process (human output, `--json` values, hook payload strings, logs) passes one sanitizer. It replaces C0 controls except newline and tab, DEL, C1 controls, bidirectional and isolate controls, zero-width and other format characters, the tag-character block, surrogates, private-use and unassigned code points, U+2028 and U+2029, non-space separators and variation selectors with `<U+XXXX>` markers, and also U+034F, U+115F, U+1160, U+16FE4, U+17B4, U+17B5, U+180B to U+180F, U+2800, U+3164, U+FFA0 and U+FFFC (so shown text equals the text ticketctl sends). It caps runs of combining marks at 8 (a cap on the length of a run, not on its width: the width of every row is counted by the Review screen's width rule, 2 cells for each code point other than printable ASCII) and, for non-screen output (hook and log text), truncates lines over 200 characters with `<...>`. Terminal output of model text follows the Review screen's layout rule instead of the truncation. The sanitizer is applied once, at the point of output.
 
 ## Objects
 
@@ -657,7 +696,7 @@ Config keys take `TICKET_CREATE_<KEY>` (nested keys joined with `__`) for `mode`
 
 ## Labels
 
-Agents get `owner=ticket-create`, `draft=<draft_id>` and, when there is a repo, `repo=<id>` (the repo id is claude-session's: `host/<path>`, see Draft order step 1). ticket-create finds an agent by its stored `agent_id`; labels are used only when none is stored (the process died before the launch result was read), and then only for exactly one agent of kind `draft-ticket` that is not torn down (`agent-spawn list --label owner=ticket-create --json`). `discard` and `prune` tear down only the agent found this way. Ticket labels (Jira labels) are separate: `--ticket-label` and the artifact's `labels`. They are never agent labels and never contain whitespace.
+Agents get `owner=ticket-create`, `draft=<draft_id>` and, when there is a repo, `repo=<id>` (the repo id is claude-session's: `host/<path>`, see Draft order step 1). ticket-create finds an agent by its stored `agent_id`; labels are used only when none is stored (the process died before the launch result was read), and then only for exactly one agent of kind `draft-ticket` that is not torn down (`agent-spawn list --label owner=ticket-create --json`); two or more are a lookup error, never "no agent", and so is any agent-spawn failure (see Gate). `discard` and `prune` tear down only the agent found this way. Ticket labels (Jira labels) are separate: `--ticket-label` and the artifact's `labels`. They are never agent labels and never contain whitespace.
 
 ## Files
 
@@ -665,11 +704,11 @@ All under `~/.local/state/ticket-create/` (`XDG_STATE_HOME` respected), director
 
 ## Audit and log
 
-`audit.jsonl` has one `attempted` record just before each `ticketctl create --yes` and `sprint add --yes` call and an outcome record after it, paired by `attempt_id` (ticket-create's own), plus one `outcome` record per `draft` run and one per `accept` (no `attempted` record: there was no write call). Fields: `ts`, `actor`, `decision_id` (list), `phase` (`attempted`, `outcome`), `attempt_id`, `action` (`create`, `sprint_add`, `draft`), `target` (`<site>/<project>` or the draft id), `inputs` (`draft_id`, `dedupe_key`, `plan_sha256`, `body_sha256`, `origin`, `overrides` (the closed list of Draft record and statuses), `override_count`, `override_escalation` (null or `ticketctl`), `agent_id`), `result` (`key`, `reused`, `ticketctl_attempt_id`, `outcome`, `code`), `seq`. `result.outcome` is one of `attempted`, `created`, `reused`, `accepted`, `failed`, `unknown`, `done` (sprint), `ready`, `abandoned`. `log.jsonl` records each command with counts and hashes; its events are `command`, `hook_result`, `lower_call`, `session`, `draft_state`, `lease` and `warning`, each written when its thing happens (a command ends, a hook returns, a lower tool call ends, a session outcome is read, a status changes, a lease is acquired, released, taken over, lost or stalled, a warning is raised). Neither file holds the title, body, notes or any model text, and neither holds secrets.
+`audit.jsonl` has one `attempted` record just before each `ticketctl create --yes` and `sprint add --yes` call and an outcome record after it, paired by `attempt_id` (ticket-create's own; `finish` closes every `attempted` record the call opened, with `unknown` when the answer is not known and with `failed` and code `not_sent` when the call was never started), plus one `outcome` record per `draft` run and one per `accept` (no `attempted` record: there was no write call). Fields: `ts`, `actor`, `decision_id` (list), `phase` (`attempted`, `outcome`), `attempt_id`, `action` (`create`, `sprint_add`, `draft`), `target` (`<site>/<project>` or the draft id), `inputs` (`draft_id`, `dedupe_key`, `plan_sha256`, `body_sha256`, `origin`, `overrides` (the closed list of Draft record and statuses), `override_count`, `override_escalation` (null or `ticketctl`), `agent_id`), `result` (`key`, `reused`, `ticketctl_attempt_id`, `outcome`, `code`), `seq`. `result.outcome` is one of `attempted`, `created`, `reused`, `accepted`, `failed`, `unknown`, `done` (sprint), `ready`, `abandoned`. `log.jsonl` records each command with counts and hashes; its events are `command`, `hook_result`, `lower_call`, `session`, `draft_state`, `lease` and `warning`, each written when its thing happens (a command ends, a hook returns, a lower tool call ends, a session outcome is read, a status changes, a lease is acquired, released, taken over, lost or stalled, a warning is raised). Neither file holds the title, body, notes or any model text, and neither holds secrets.
 
 ## Concurrency
 
-A per-draft lease is taken by `draft` (new and `--continue`), `create`, `discard` and `prune`, after the gate of Gate has run (a live `drafting` draft is refused with exit 20 before any lease is taken). A lease row holds the PID, the process start time, the expiry and a random `token` set at each acquisition. Its time to live is 60 seconds and a background thread of the holder renews it every 20 seconds, including while the process waits for a session or a prompt. Every transaction that changes a draft (T3, T5, T6, T9 to T18 of the Transitions table, `discard`, `prune`) is conditional on `token = mine`; a transaction that finds another token changes nothing and the call exits 12 `unavailable` (`locked`) before any ticketctl call. Renewal uses a monotonic clock: before the transaction of T10 and before a `sprint add --yes`, the holder refuses to continue (exit 12 `unavailable`) when its last successful renewal is older than the time to live. A lease is taken over when its holder (PID plus start time) is dead or its expiry passed by more than one time to live; a takeover logs `taken_over` and a failed renewal is logged as `stalled`. If the compare-and-set fails after a write call returned, ticket-create still writes the audit outcome record, prints the key and exits 12 `unavailable` naming the key in `details.key`. A contended lease is exit 12 `unavailable` (`locked`) for `create`, `--continue` and a draft in any status other than `drafting`; `discard` refuses a draft whose lease is held with exit 20 `live` (one reason for in use); `prune` skips it. Two `draft` runs for different drafts do not interact. `list` and `show` take no lease.
+A per-draft lease is taken by `draft` (new and `--continue`), `create`, `discard` and `prune`, after the gate of Gate has run (a live draft is refused with exit 20 before any lease is taken: any status for `--continue`, `discard` and `prune`, `drafting` for `create`). A lease row holds the PID, the process start time, the expiry and a random `token` set at each acquisition. Its time to live is 60 seconds and a background thread of the holder renews it every 20 seconds, including while the process waits for a session or a prompt. Every transaction that changes a draft (T3, T5, T6, T9 to T18 of the Transitions table, `discard`, `prune`) is conditional on `token = mine`; a transaction that finds another token changes nothing and the call exits 12 `unavailable` (`locked`) before any ticketctl call. Renewal uses a monotonic clock: before the transaction of T10 and before a `sprint add --yes`, the holder refuses to continue (exit 12 `unavailable`) when its last successful renewal is older than the time to live. A lease is taken over when its holder (PID plus start time) is dead or its expiry passed by more than one time to live; a takeover logs `taken_over` and a failed renewal is logged as `stalled`. If the compare-and-set fails after a write call returned, ticket-create still writes the audit outcome record, prints the key and exits 12 `unavailable` naming the key in `details.key`. A contended lease is exit 12 `unavailable` (`locked`) for `create`, `--continue` and a draft in any status other than `drafting`; `discard` refuses a draft whose lease is held with exit 20 `live` (one reason for in use); `prune` skips it. Two `draft` runs for different drafts do not interact. `list` and `show` take no lease.
 
 ## Dependencies
 

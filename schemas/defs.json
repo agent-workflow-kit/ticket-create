@@ -215,7 +215,8 @@
         "implicit_done",
         "needs_human",
         "outcome",
-        "no_report"
+        "no_report",
+        "launch_failed"
       ]
     },
     "failure_detail": {
@@ -450,9 +451,9 @@
       "type": "string",
       "pattern": "^[A-Za-z][A-Za-z0-9 _.-]{0,99}$",
       "not": {
-        "pattern": "^(?:[Tt][Ii][Tt][Ll][Ee]|[Ss][Uu][Mm][Mm][Aa][Rr][Yy]|[Dd][Ee][Ss][Cc][Rr][Ii][Pp][Tt][Ii][Oo][Nn]|[Ll][Aa][Bb][Ee][Ll][Ss]|[Aa][Ss][Ss][Ii][Gg][Nn][Ee][Ee]|[Pp][Aa][Rr][Ee][Nn][Tt]|[Ss][Pp][Rr][Ii][Nn][Tt]|[Rr][Ee][Ss][Oo][Ll][Uu][Tt][Ii][Oo][Nn]|[Rr][Ee][Pp][Oo][Rr][Tt][Ee][Rr])$"
+        "pattern": "^(?:[Tt][Ii][Tt][Ll][Ee]|[Ss][Uu][Mm][Mm][Aa][Rr][Yy]|[Dd][Ee][Ss][Cc][Rr][Ii][Pp][Tt][Ii][Oo][Nn]|[Ll][Aa][Bb][Ee][Ll][Ss]|[Aa][Ss][Ss][Ii][Gg][Nn][Ee][Ee]|[Pp][Aa][Rr][Ee][Nn][Tt]|[Ee][Pp][Ii][Cc]|[Ss][Pp][Rr][Ii][Nn][Tt]|[Rr][Ee][Ss][Oo][Ll][Uu][Tt][Ii][Oo][Nn]|[Rr][Ee][Pp][Oo][Rr][Tt][Ee][Rr])$"
       },
-      "description": "A field's logical name: 1 to 100 characters from A-Za-z0-9 space _ . -, starting with a letter, and not (case-insensitively) title, summary, description, labels, assignee, parent, sprint, resolution or reporter.",
+      "description": "A field's logical name: 1 to 100 characters from A-Za-z0-9 space _ . -, starting with a letter, and not (case-insensitively) title, summary, description, labels, assignee, parent, epic, sprint, resolution or reporter (epic is ticketctl's logical name that sets the parent).",
       "x-untrusted": true
     },
     "field_value": {
@@ -562,6 +563,7 @@
             "credential_env_empty",
             "existing_differs",
             "mcp_inherited",
+            "profile_missing_deny",
             "skill_unchecked"
           ]
         },
@@ -694,8 +696,8 @@
           "oneOf": [
             {
               "type": "string",
-              "maxLength": 256,
-              "description": "The artifact's dropped value, model-written; null when the artifact omitted the field.",
+              "maxLength": 1400,
+              "description": "The artifact's dropped value, model-written, stored whole (for ticket_labels the artifact's labels joined with a comma and a space); null when the artifact omitted the field.",
               "x-untrusted": true
             },
             {

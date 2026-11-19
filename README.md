@@ -35,7 +35,7 @@ See [Commands](docs/interface.md#commands) for every flag.
 | [ticketctl](https://github.com/agent-workflow-kit/ticketctl) | A (hard) | `uv tool install git+https://github.com/agent-workflow-kit/ticketctl` |
 | [agent-spawn](https://github.com/agent-workflow-kit/agent-spawn) (0.34.0 or later) | A (hard) | `uv tool install git+https://github.com/agent-workflow-kit/agent-spawn` |
 
-agent-spawn needs [claude-session](https://github.com/agent-workflow-kit/claude-session) and [wtctl](https://github.com/agent-workflow-kit/wtctl) installed, and the ticket system's token variable must be listed in claude-session's `secret_env` so the draft session never receives it (the bundled permission profile also denies `mcp__*` tools; replace the profile in config if you want connectors in draft sessions). A missing sibling is reported with its install command.
+agent-spawn needs [claude-session](https://github.com/agent-workflow-kit/claude-session) and [wtctl](https://github.com/agent-workflow-kit/wtctl) installed, and the ticket system's token variable must be listed in claude-session's `secret_env` so the draft session never receives it (the bundled permission profile also denies `mcp__*` tools; replace the profile in config if you want connectors in draft sessions; `validate` warns when a replaced profile does not deny ticketctl, agent-spawn, ticket-create and `mcp__*`). A missing sibling is reported with its install command.
 
 ## Install
 

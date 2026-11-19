@@ -19,7 +19,7 @@ timeout: null                   # passed to agent-spawn, for example 30m; null k
 cwd: null                       # caller or session-dir; null: the caller's directory (interactive), session-dir (headless)
 sandbox: "off"                  # required, preferred or off (quoted: a bare off is a YAML boolean)
 setting_sources: []             # --setting-sources: any of user, project, local; empty loads none
-permission_profile: null        # absolute path of a permission profile; null uses the bundled one
+permission_profile: null        # absolute path of a permission profile; null uses the bundled one (validate warns when a replaced profile does not deny ticketctl, agent-spawn, ticket-create and mcp__*)
 env_allowlist: []               # environment variable names added to the fixed base list passed to the session
 credential_env: []              # variable names removed from the environment of hooks and the editor; list your ticketctl token variable (validate warns while empty)
 plugin_dirs: []                 # extra plugin directories (absolute, owned by you)
