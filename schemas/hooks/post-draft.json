@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ticket-create/hooks/post-draft.json",
+  "title": "post-draft hook payload (stdin)",
+  "description": "After every run that ends in ready, failed or abandoned, a failed --continue run included (then status is ready with failure set), and after an adopted run. event_id is fresh per invocation. No repo or labels key (the draft has a repo; it is not part of the payload). No title, body, notes or other model text.",
+  "type": "object",
+  "properties": {
+    "tool": {
+      "const": "ticket-create"
+    },
+    "hook": {
+      "const": "post-draft"
+    },
+    "object_type": {
+      "const": "draft"
+    },
+    "object_id": {
+      "$ref": "../defs.json#/$defs/draft_id"
+    },
+    "origin": {
+      "$ref": "../defs.json#/$defs/origin"
+    },
+    "status": {
+      "enum": [
+        "ready",
+        "failed",
+        "abandoned"
+      ]
+    },
+    "failure": {
+      "oneOf": [
+        {
+          "$ref": "../defs.json#/$defs/failure"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "outcome": {
+      "oneOf": [
+        {
+          "$ref": "../defs.json#/$defs/session_outcome"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "site": {
+      "$ref": "../defs.json#/$defs/site"
+    },
+    "project": {
+      "$ref": "../defs.json#/$defs/project"
+    },
+    "type": {
+      "oneOf": [
+        {
+          "$ref": "../defs.json#/$defs/type_name"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "sizes": {
+      "oneOf": [
+        {
+          "$ref": "../defs.json#/$defs/sizes"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "artifact_sha256": {
+      "oneOf": [
+        {
+          "$ref": "../defs.json#/$defs/sha256"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "event_id": {
+      "$ref": "../defs.json#/$defs/event_id"
+    },
+    "reads_third_party": {
+      "const": false
+    },
+    "tainted": {
+      "const": false
+    }
+  },
+  "required": [
+    "tool",
+    "hook",
+    "object_type",
+    "object_id",
+    "origin",
+    "status",
+    "failure",
+    "outcome",
+    "site",
+    "project",
+    "type",
+    "sizes",
+    "artifact_sha256",
+    "event_id",
+    "reads_third_party",
+    "tainted"
+  ],
+  "additionalProperties": false
+}

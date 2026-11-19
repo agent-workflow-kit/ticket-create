@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ticket-create/cli/validate.json",
+  "title": "validate --json",
+  "description": "Printed whatever the exit code; with exit 2 or 12 the failure is the error member. Exits 0 whenever the checks ran, except a config that does not load (exit 2) and a missing sibling (exit 12 tool_missing; with --probe also tool_too_old); any other failed check is data.",
+  "type": "object",
+  "properties": {
+    "valid": {
+      "type": "boolean"
+    },
+    "probe": {
+      "type": "boolean"
+    },
+    "checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "enum": [
+              "config",
+              "siblings",
+              "skill",
+              "templates",
+              "ticketctl",
+              "versions",
+              "kind_check"
+            ]
+          },
+          "ok": {
+            "type": "boolean"
+          },
+          "code": {
+            "oneOf": [
+              {
+                "$ref": "../defs.json#/$defs/code"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "skipped": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "ok",
+          "code"
+        ],
+        "additionalProperties": false
+      },
+      "maxItems": 50
+    },
+    "profile_denies": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 256
+      },
+      "maxItems": 200,
+      "description": "The resolved permission profile's denies."
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "$ref": "../defs.json#/$defs/warning"
+      },
+      "maxItems": 100
+    },
+    "error": {
+      "$ref": "../defs.json#/$defs/error_body"
+    }
+  },
+  "required": [
+    "valid",
+    "probe",
+    "checks",
+    "profile_denies",
+    "warnings"
+  ],
+  "additionalProperties": false
+}

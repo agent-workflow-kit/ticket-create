@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ticket-create/cli/prune.json",
+  "title": "prune --json",
+  "type": "object",
+  "properties": {
+    "dry_run": {
+      "type": "boolean"
+    },
+    "results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "object_type": {
+            "enum": [
+              "draft",
+              "prompt",
+              "result",
+              "tmp"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/#=+-]{0,255}$",
+            "description": "Full match."
+          },
+          "result": {
+            "enum": [
+              "deleted",
+              "would_delete",
+              "skipped"
+            ]
+          },
+          "reason": {
+            "oneOf": [
+              {
+                "$ref": "../defs.json#/$defs/code"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "object_type",
+          "id",
+          "result",
+          "reason"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "$ref": "../defs.json#/$defs/warning"
+      },
+      "maxItems": 100
+    }
+  },
+  "required": [
+    "dry_run",
+    "results",
+    "warnings"
+  ],
+  "additionalProperties": false
+}

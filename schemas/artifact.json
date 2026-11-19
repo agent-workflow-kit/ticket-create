@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ticket-create/artifact.json",
+  "title": "draft-ticket artifact",
+  "description": "The artifact the draft-ticket skill writes as draft.json for a done report (interface.md, Slot contract). Unknown keys are refused. title, body_md, notes and string field values are untrusted. parent, labels, assignee, fields and notes may be omitted; assignee and parent may be null. run_token is that of the newest prompt.",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "draft_id": {
+      "$ref": "defs.json#/$defs/draft_id"
+    },
+    "run_token": {
+      "$ref": "defs.json#/$defs/run_token"
+    },
+    "type": {
+      "$ref": "defs.json#/$defs/type_name"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255,
+      "pattern": "^[^\\u0000-\\u0008\\u000b-\\u001f\\u007f-\\u009f\\u00ad\\u034f\\u061c\\u115f-\\u1160\\u17b4-\\u17b5\\u180b-\\u180f\\u200b-\\u200f\\u2028-\\u202e\\u2060-\\u206f\\u2800\\u3164\\ufe00-\\ufe0f\\ufeff\\uffa0\\ufff9-\\ufffc\\u0009\\u000a]+$",
+      "description": "One line (no line breaks); 1 to limits.title_chars characters after trimming.",
+      "x-untrusted": true
+    },
+    "body_md": {
+      "$ref": "defs.json#/$defs/body_md"
+    },
+    "parent": {
+      "oneOf": [
+        {
+          "$ref": "defs.json#/$defs/parent_key"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "labels": {
+      "$ref": "defs.json#/$defs/ticket_labels"
+    },
+    "assignee": {
+      "oneOf": [
+        {
+          "$ref": "defs.json#/$defs/assignee"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "fields": {
+      "$ref": "defs.json#/$defs/fields"
+    },
+    "notes": {
+      "$ref": "defs.json#/$defs/notes"
+    }
+  },
+  "required": [
+    "schema_version",
+    "draft_id",
+    "run_token",
+    "type",
+    "title",
+    "body_md"
+  ],
+  "additionalProperties": false
+}

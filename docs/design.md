@@ -1,60 +1,147 @@
 # ticket-create: design
 
-Status: Seeded from awkit architecture v1.4; not yet designed.
+Status: 0.1.0-design (2026-11-19). The normative rules are in [interface.md](interface.md); this document records the reasons, the decisions and the module plan, and links to the interface's headings instead of restating them.
 
 ## Role and layer
 
-Layer 2 (composite). Skill-wrapper that drafts tickets with Claude and creates them after confirmation. Works fully standalone (architecture C2).
-
-## Responsibilities (architecture §5.2)
-
-Skill-wrapper: draft and create tickets.
-
-- Commands: `draft`, `create`.
-- Uses: ticketctl, agent-spawn (same layer; allowed by section 3.2).
-- Notes: Default mode interactive; `draft` runs the session (kind `draft-ticket`) in the current terminal (`--placement here`). `create` requires a TTY (exit 13 otherwise) and always confirms before creating. The draft-ticket skill and template are configurable (an organization's ticket format lives in the user's config or skill, not here).
-
-Section numbers above refer to `../awkit-docs/architecture.md`.
+Layer 2 (composite). A skill wrapper that drafts tickets with an interactive Claude session and creates them through ticketctl after one human confirmation. It works fully standalone (architecture C2): no harness, bus or shared library.
 
 ## Uses
 
-- ticketctl: binding TBD (A/B/C), decided in this design session
-- agent-spawn (same layer; allowed by architecture §3.2): binding TBD (A/B/C), decided in this design session
+| Tool | Binding | Why |
+|---|---|---|
+| ticketctl | A (hard) | The only ticket writer. ticket-create parses its documented `--json` output and exit codes. There is no second provider in 0.x, so a configurable command (B) would be speculation. |
+| agent-spawn | A (hard) | Launches the session in the current terminal (`--placement here`), supplies the result file, the parked-agent labels and the teardown. Same layer, allowed by architecture §3.2. |
+| claude-session | none (through agent-spawn) | agent-spawn depends on it; ticket-create never calls it. Its `secret_env` list must name ticketctl's token variable. |
+| memoctl | none | Notes reach the session through claude-session's `notes_context`; ticket-create only passes `--repo`. |
 
-## Cross-cutting sections to read
-
-In `../awkit-docs/architecture.md` (plus `../awkit-docs/design-guide.md` throughout):
-
-- §5.5: capability slots: `draft-ticket`, kind `draft-ticket`, default mode interactive; design guide §11 (skill-wrapper requirements)
-- §8.1: kinds (`draft-ticket`: not third-party-reading, caller's cwd)
-- §9.2: launch flags and `--placement here`
-- §12.1, §12.4: create tickets: interactive, always confirm; commands that require a human exit 13 without a TTY
-- §13.2: prompt injection: draft text is agent-generated and travels in files
-- §14: audit of ticket creation
-
-## Capability slot
-
-Default skill: `ticket-create:draft-ticket` (bundled in `plugin/skills/draft-ticket/`). The slot contract (inputs given to the skill, artifact format expected back) is specified in `docs/interface.md`.
+See [Dependencies](interface.md#dependencies) for the pinned minimums.
 
 ## Constraints (decided)
 
-From architecture §20: `create` requires a TTY.
+- `create` requires a human at a terminal and always confirms (architecture §5.2, §12.1, §12.4). There is no option to skip the confirmation and no pending store.
+- The organization's ticket format lives in the user's config (a template file) or in a replacement skill, never in this repository.
+- The draft session's launch environment holds no ticketctl credential and its permission profile denies ticketctl; ticket-create is the only process that runs `ticketctl create` and `sprint add`. This is guidance for a cooperative session, not a boundary (see D-25 and [Residual risks](interface.md#residual-risks)).
+- Untrusted and model-written text travels only in files, never argv or env.
 
-Packaging: The bundled plugin is shipped inside the package and located via `importlib.resources.files('ticket_create') / 'plugin'`.
+## Resolved open topics
 
-## Open topics
+**Draft template.** A small generic bundled skill writes a one-line title and Markdown sections (context, what to do, acceptance criteria, out of scope). A user's own format arrives as a template file in `templates` (looked up by the type given by flag or default type, else by `default`), passed to the session as the trusted input file `template.md` (the session's start line gives its path), or as a whole replacement skill. See [Slot contract](interface.md#slot-contract) and [Configuration](interface.md#configuration).
 
-From architecture §20:
-
-- draft template
-- confirm flow
+**Confirm flow.** ticket-create owns the confirmation. It runs ticketctl's `--dry-run`, shows its own review screen, reads one answer from `/dev/tty` (while any model-written text is cut from the screen, a `v` viewer must show it before `y` is accepted, D-28), and only then calls ticketctl with `--yes --expect-plan <hash> --dedupe-key <key>`. The hash binds the human's yes to the plan on the screen; ticket-create also checks its own input files before the write, because the hash is not documented to cover the title, type or parent. A hook escalation after the yes is a second human question. See [Review screen](interface.md#review-screen), [Prompt and terminal rules](interface.md#prompt-and-terminal-rules) and [Create order](interface.md#create-order).
 
 ## Decisions
 
-| Decision | Rationale | Date |
+| # | Decision | Reason | Interface |
+|---|---|---|---|
+| D-1 | A saved draft with a `draft_id` generated before the session; `draft` stores, `create` confirms and writes; the statuses and the transitions between them are normative in the interface (D-23); the review offer after `draft` is made only on a terminal and never with `--json` or `--result-file` | The dedupe key must be stable per draft and a retry must find the draft again | [Draft record and statuses](interface.md#draft-record-and-statuses) |
+| D-2 | ticket-create owns the confirmation and passes `--yes --expect-plan`; the dry-run and the write run as the same human actor; a hook escalation is a second human question | An edit step needs its own screen; one prompt, not two; the hash binds the answer to the plan and ticket-create checks its own input files before the write; a different actor changes the attribution paragraph and so the hash | [Create order](interface.md#create-order) |
+| D-3 | `draft` takes optional seeds and fixed fields; nothing is required; the fixed values are stored with the draft and win over the artifact (D-29) | The skill interviews; the wrapper supplies deterministic facts; a continuation rebuilds its header from the stored values | [draft](interface.md#draft) |
+| D-4 | Prefetch create-form facts, near-duplicates and the parent summary (a phrase search on the first line of the seed, best effort); form facts travel in a fenced untrusted block; a post-draft duplicate check shows warnings only | The session has no credentials; form facts make a draft creatable at the first dry-run; provider text is untrusted | [Prefetch](interface.md#prefetch) |
+| D-5 | A closed artifact schema bound to the run by `draft_id` and `run_token`; no skill marker | The human reviews every field, so a wrong-skill draft costs a retry and a marker would burden replacement skills | [Slot contract](interface.md#slot-contract) |
+| D-6 | Sandbox off, no setting sources, an environment allowlist and a bundled permission profile, each replaceable in config; the profile is guidance, not a boundary (D-25) | Design guide §11 says a wrapper's safety must not depend on another tool's config; an interactive trusted session cannot run sandboxed by default | [Session launch](interface.md#session-launch) |
+| D-7 | The review screen offers yes, edit and cancel, and `accept` when a ticket already exists (`accept` reads the existing ticket and records it; it never calls a create); other fields change through flags that are saved and marked `overridden`; `draft --continue` resumes the parked session when it can and otherwise restarts from the stored draft | Covers the real cases without building a form | [draft](interface.md#draft), [create](interface.md#create), [Editor](interface.md#editor) |
+| D-8 | The dedupe key is `ticket-create:<draft_id>` with a generation suffix after `create --again`; every `create` round's dry-run alone decides the screen state and attempt history only adds warnings; site and project are frozen once an attempt could have landed; `accept` is a read and writes no attempt | A key containing title or type creates a duplicate after an edit (verified in a model of ticketctl's rule); a key without them makes ticketctl refuse safely; ticketctl's label and lookup are scoped by site and project | [Dedupe key and attempts](interface.md#dedupe-key-and-attempts) |
+| D-9 | `--sprint` is resolved by ticketctl's rules before the screen and added after the ticket exists; a later sprint-only run asks again | `create` has no sprint option; one honest yes; a failure leaves a ticket and a retryable step; a requested sprint that did not run leaves the draft `sprint_failed` | [Sprint step](interface.md#sprint-step) |
+| D-10 | `create` is terminal-only: no `--yes`, no pending store; headless drafts are the bridge for automation; an unattended run marks a draft `headless` for good | The architecture's constraint; a stored draft already is the pending record; the marker stays true after a later interactive continuation | [Exit codes](interface.md#exit-codes), [draft](interface.md#draft) |
+| D-11 | SQLite `state.db` plus public `log.jsonl` and `audit.jsonl`; retention 30 and 90 days | Design guide defaults; attempt history keeps the dedupe rule correct | [Files](interface.md#files), [Audit and log](interface.md#audit-and-log) |
+| D-12 | Hooks `pre-draft`, `post-draft`, `post-create`; no `pre-create` | ticketctl's own `pre-create` runs after the confirmation and is where a gate belongs | [Hooks](interface.md#hooks) |
+| D-13 | The command set and the exit-code table | The minimum that makes the decisions operable; 22 means a draft's content is missing or invalid | [Commands](interface.md#commands), [Exit codes](interface.md#exit-codes) |
+| D-14 | Both siblings are binding A; claude-session and memoctl are not direct dependencies; `--placement here` only | Matches the architecture and the other wrappers; window placement can be added later | [Dependencies](interface.md#dependencies) |
+| D-15 | A generic bundled template plus `templates` and `skill` in config; the template is passed as an input file named `template.md` and a type chosen by the session uses `templates.default` | Organization formats stay out of the repository | [Slot contract](interface.md#slot-contract) |
+| D-16 | The repo is optional and falls back through the project mapping and the cwd's `origin`; site and project resolve by a fixed chain that ends in ticketctl's own offline selection | Notes and per-repo settings need a repo id, but many tickets have none; no new config key is needed | [draft](interface.md#draft-order) |
+| D-17 | The review screen layout (gutter zone, facts block, prompt) with one row allocator that gives every item at least two rows, no folded facts, autowrap off while the items and facts are drawn and on again for the closed prompt line, one width rule for every width (printable ASCII is 1 cell, every other code point is 2), the terminal restore, the reader and the one sanitizer, whose replacement set is the union with ticketctl's | Each rule closes an attack that a live check demonstrated; shown text must equal sent text | [Review screen](interface.md#review-screen), [Prompt and terminal rules](interface.md#prompt-and-terminal-rules), [Artifact reader](interface.md#artifact-reader), [Output sanitizing](interface.md#output-sanitizing) |
+| D-18 | Copy the artifact, then tear the agent down only when the draft is settled; otherwise leave it parked; a run never destroys a stored valid artifact; a continuation never changes a stored artifact's status, and a finished unattended run is adopted, not resumed | A resumable conversation exactly when something went wrong; no residue otherwise | [Session outcomes](interface.md#session-outcomes) |
+| D-19 | The config surface; per-repo overrides never select a program or a credential destination | Design guide §5 and §12 | [Configuration](interface.md#configuration) |
+| D-20 | An audit pair per create and sprint attempt, plus a record per draft run | Design guide §6 and the `attempt_id` link that `awkit audit` pairs by | [Audit and log](interface.md#audit-and-log) |
+| D-21 | A skill preflight for `plugin:skill` names and an exit-14 hint when the session never started working; a headless exit 14 is `failed` with `no_report`, an interactive one is `abandoned`; an error before any session exists deletes a new draft instead of leaving a failed one (see Error handling) | A wrong skill name in an interactive session sits idle and exits 14 with no other signal; `abandoned` means a human left | [Draft order](interface.md#draft-order), [Session outcomes](interface.md#session-outcomes) |
+| D-22 | Interactive drafts run in the caller's cwd, headless drafts in the session directory | A human can answer the trust dialog and the skill can read the repo; unattended runs cannot | [Session launch](interface.md#session-launch) |
+| D-23 | The draft state machine (statuses, `rest_status`, the 19 transitions, gate table) and the attempt rules are normative in the interface; the attempt outcome starts as `unknown` and is overwritten when ticketctl answers | One transition function removes the unstated outcomes; a crash needs no extra state | [Draft record and statuses](interface.md#draft-record-and-statuses), [Dedupe key and attempts](interface.md#dedupe-key-and-attempts) |
+| D-24 | The review screen puts every model-written value (title, body, notes, field values, labels, assignee, suggestions, duplicate titles, sprint name, provider and hook text) in the bar-prefixed zone above the line, one row allocator with a floor of two rows per item that fits the terminal height; below the line only checked single-line values and the quoted title clipped to one row; no row of the facts block is folded | One rule a human can learn: a bar means model text; forged lines cannot scroll the real facts off, and the sprint name stays above the line | [Review screen](interface.md#review-screen) |
+| D-25 | The bundled permission profile denies `mcp__*`, `memoctl add` and the awkit shell paths; users who want connectors replace the profile; the profile is guidance, not a boundary | A connector that writes tickets would be a second write path around the screen; a shell profile, an approved tool call or an inherited MCP server can still reach one | [Session launch](interface.md#session-launch), [Residual risks](interface.md#residual-risks) |
+| D-26 | Environment variables set only `mode`, `model`, `timeout`, `duplicates.*` and `retention.*`; every other key comes from config files and flags | Repository tooling sets the environment, and a repository-level value must never select a program or a place to send credentials | [Environment variables](interface.md#environment-variables) |
+| D-27 | A config key `credential_env` (variable names, default empty) is removed from the environment of hooks and the editor; `validate` warns while it is empty | ticket-create names no token variable of its own, and hooks and the editor would otherwise see ticketctl's | [Configuration](interface.md#configuration), [validate](interface.md#validate) |
+| D-28 | While any model-written item is cut from the screen, `y` is refused; a `v` key shows every cut item in full, a page at a time, and once all have been shown `y` is accepted again until the next edit, override or change of the terminal size; the shown set is keyed by the item's text digest and a resize or an answer typed against a stale size draws again and sends nothing | A cut tail is the one place a hostile session can put text the human did not read; the viewer is one more key and one more refusal state | [Review screen](interface.md#review-screen) |
+| D-29 | The stored draft keeps the fixed values the human gave `draft` (`--type`, `--parent`, `--ticket-label`); a different value in the artifact is dropped, stored as the warning `fixed_field_changed` and shown as a suggestion the human adopts with the matching `create` flag; ticketctl's alias of the parent (`epic`) is a reserved field name, so no `fields` entry can replace a fixed value | One rule with no mode branch; a seed that steers the session cannot override the human's own flag | [Draft record and statuses](interface.md#draft-record-and-statuses), [create](interface.md#create) |
+| D-30 | Every width on the review screen is counted by one rule: printable ASCII is 1 cell and every other code point is 2 cells; no width table, and a pseudo-terminal test measures every code point the sanitizer leaves alone | A width table that disagrees with the terminal lets a model hide the tail of a row (a mark that counts 0 and advances 2); the rule only errs on the safe side, and the cost is a narrower view of non-ASCII text, never a hidden tail | [Review screen](interface.md#review-screen) |
+| D-31 | `draft` and `create` install signal handlers first, and every exit passes the finish step; from the audit `attempted` record of a write call to the end of `finish` signals are deferred, the exit code after a write that may have landed is the write's, the `attempted` record is written before the draft turns `unknown`, and every opened `attempted` record is closed | Python's default for SIGHUP and SIGTERM leaves the lease, the work directory and no audit record; an exit 130 after a created ticket tells a caller that nothing happened; a failed audit write must not leave a draft `unknown` for a call that was never sent | [Create order](interface.md#create-order), [Signals](interface.md#prompt-and-terminal-rules) |
+| D-32 | The live check applies to `--continue`, `discard` and `prune` for every status, and a failed or ambiguous agent lookup is an error (exit 12 `lower_failed`, `unknown` in `list`), never "no agent"; a refused launch whose teardown fails keeps its row as `failed` | A continuation that died while its agent runs would otherwise get a second session or be discarded under a running one; a parked agent no row points at is never removed | [Gate](interface.md#gate), [Draft order](interface.md#draft-order) |
+
+## Deviations from the design guide
+
+- **Safety defaults (§11).** The `draft-ticket` kind is trusted and the default sandbox is `off`, with an empty setting-sources list. The environment allowlist and a bundled permission profile still apply. Each is a config key. ticket-work records the same kind of deviation.
+- **No pending store (§4.4).** A command that requires a human exits 13 without a terminal and leaves nothing pending; the stored draft is the unit of work.
+- **Exit 22 (§4.2).** The meaning is "a draft's content is missing or invalid", the same use as in review-run; it also covers ticketctl's own input validation on a dry-run.
+- **Environment layer (§5).** Only harmless keys read `TICKET_CREATE_<KEY>` (D-26).
+- **`LC_*` narrowing.** The approved base environment list had `LC_*`; claude-session's `--env-allowlist-only` takes plain names, so only `LC_ALL` is on the list.
+- **`--json` on the interactive launch.** `draft` also passes `--result-file`; the interactive launch prints one result line after the session. `--json` is always passed; if the live check (V-18) shows it must be omitted, the interface changes in 0.x.
+
+## Live verification
+
+| # | Fact | Status |
 |---|---|---|
+| V-1 | An interactive `draft-ticket` run under `--placement here` ends with exit 0 when the skill reports `done` with an artifact, with auto-exit returning control | verified (agent-spawn 0.34.0, claude-session 0.45.2) |
+| V-2 | Quitting before a report exits 14 with `report: null`; a wrong skill name sits idle and exits 14 with `first_working_at` null | verified |
+| V-3 | `needs-input` does not end an interactive session; a later `done` supersedes it; ending in `needs-input` exits 13 | verified |
+| V-4 | A `done` with no artifact, a non-JSON artifact and a wrong value are all accepted by claude-session and frozen byte for byte | verified |
+| V-5 | The frozen artifact is mode 0600 in a 0700 directory; `--ephemeral` does not remove it; `forget` keeps it 30 days, `forget --purge` removes it | verified |
+| V-6 | A token-like variable reaches the session by default; `secret_env` and `--env-allowlist-only` remove it with nothing else breaking | verified |
+| V-7 | A `--result-file` write failure is only a warning; `--placement here` with no terminal on stdin and stdout exits 2 and leaves no state | verified |
+| V-8 | The session needs wtctl installed even with `--worktree none` | verified |
+| V-9 | `/dev/tty` opening is the only reliable "a human can be asked" test; an early typed `y` is taken as the answer unless input is flushed | verified (local terminal harness) |
+| V-10 | The reader, the sanitizer and the editor rules withstand the attack corpus (29 file and structure cases, 28 display cases) | verified |
+| V-11 | The dedupe key without title or type never creates a duplicate in any edit scenario; scenario rows also cover a project override and a site override after an attempt (exit 20 `attempt_recorded`) | verified (model of ticketctl's rule); the two override rows are checked in the dedupe scenario table |
+| V-12 | `ticketctl create --dry-run` with no values returns `required_fields`, and a probe with the type `ticket-create-probe` returns the allowed types as candidates | documented in ticketctl's interface; the live check remains; a failure is the warning `form_facts_unavailable` |
+| V-13 | The dry-run plan's `description` change is a string (Markdown) that includes ticketctl's attribution paragraph | documented in ticketctl's interface except the JSON type; the live check verifies the string and the paragraph |
+| V-14 | A session directory shows (or does not show) Claude Code's trust dialog | to verify; headless drafts always pass `session-dir`, so no default is needed |
+| V-15 | Real `memoctl context` loads notes into a draft session when `--repo` is given | to verify when memoctl ships; the mechanism was verified with a stub command |
+| V-16 | The macOS terminal, editor and termios behavior | macOS checklist |
+| V-17 | A headless `launch --mode headless --no-implicit-done --wait --result-file R --json` exits with the run's outcome code and writes a result object with `run.outcome` and `run.report` | to verify live (Stage 4) |
+| V-18 | The interactive launch with `--result-file` and `--json` prints one result line after the session and writes the file | to verify live (Stage 4) |
+| V-19 | The template input is readable at the path the session's start line gives | to verify live (Stage 4) |
 
-## Questions for the design session
+## Modules
 
-1. What is the default draft template, and how does the draft-ticket skill's artifact map onto `ticketctl create --body-file` and fields?
-2. What does the confirm flow look like (preview, edit, field mapping review) before `create` calls ticketctl?
+| Module | Responsibility |
+|---|---|
+| `cli` | argparse commands, global flags, exit codes, output and the error envelope |
+| `config` | load, merge and validate config; precedence; the environment layer limited to harmless keys; `credential_env` |
+| `state` | SQLite access, migrations, the per-draft lease |
+| `drafts` | the transition table, the gate table and `enter`, the generations, the attempts, the stored seed and warnings |
+| `resolve` | the site, project, type and repo chain, the skill preflight and the sprint selectors |
+| `prefetch` | the ticketctl reads and the duplicate check |
+| `prompt` | the prompt file, nonce fencing, truncation |
+| `session` | the agent-spawn calls (launch and resume), the kind check, outcome mapping, agent lookup by stored id then label, the continue order (adoption, resume, new session) |
+| `artifact` | the strict reader and the slot validation |
+| `review` | the review screen (gutter zone, facts block, row allocator, the `v` viewer), the prompt, the editor and the terminal snapshot and restore |
+| `sanitize` | the one sanitizer |
+| `ticketctl_client` | the ticketctl calls and the mapping of its exits and plans |
+| `audit` | `audit.jsonl` and `log.jsonl` |
+| `hooks` | hook execution |
+| `gateway` | every subprocess call |
+
+## Data model
+
+One table `drafts` (the fields of [Draft record and statuses](interface.md#draft-record-and-statuses), including `generation` and the `sprint` step state) and one `attempts` table keyed by draft and attempt number `n` (with `generation`, `site`, `project`, `attempt_id` and `ticketctl_attempt_id`), plus a `meta` table for the schema version. Attempts are append-only and are deleted only with the row. Migrations are additive. `seed` and `warnings` are columns of `drafts`; the seed's idea text is never stored. Artifact text lives in the row; the database file is private.
+
+## Concurrency
+
+A per-draft lease with a holder PID, process start time and expiry; its time to live is 60 seconds and a background thread of the holder renews it every 20 seconds, including while the process waits for a session or a prompt. Each acquisition sets a random token and every write is conditional on it; before the write and before a sprint call the holder checks, on a monotonic clock, that its last renewal is still within the time to live. See [Concurrency](interface.md#concurrency).
+
+## Error handling
+
+Every lower tool's output is parsed tolerantly and its exit code mapped as in [Lower tool exits](interface.md#lower-tool-exits). Provider and hook text is untrusted and sanitized before it is printed. An error before a session exists (a prompt-file error, a failed kind check, agent-spawn ending the launch with no run) deletes a new draft (kept as `failed` when the teardown of the agent record the launch made fails) and leaves a continued one as it was. A crash leaves a `drafting` row; its agent is found by its stored id, else by label and kind (an error or two label hits is an error, never "no agent"), and the row is resolved with `draft --continue` or `discard`. Every exit of `create` passes one finish step (work directory, audit, `post-create`, lease) after handlers have turned SIGINT, SIGHUP and SIGTERM into exits. A crash during a write leaves an attempt with outcome `unknown` and the status `unknown`; the next `create` runs the dry-run and decides from ticketctl's answer.
+
+## Test strategy
+
+- All subprocess calls go through `gateway.py`; tests use fake `ticketctl` and `agent-spawn` programs in `tests/fakebin/` and copies of their schemas pinned to a version.
+- Golden files for every `--json` output and hook payload; every output validates against `schemas/`.
+- A test generated from the interface's transition table, one case per row (T1 to T19), and a test of the gate table, one case per cell, run before the lease so that a live `drafting` draft gives exit 20, not 12.
+- Terminal tests drive the review screen, the prompt and the editor through a pseudo-terminal harness, including the stale-input and escape-sequence cases, the forged-fields attack at 24 rows, row allocator cases at 24 rows with 20 fields, tab and wide-character lines, the autowrap-off check, a padded title, the fold with the gutter at 80 columns, the too-small terminal, the `v` viewer (a cut item blocks `y` until shown, a page at a time; the shown set resets on a resize and a `y` typed against a stale size sends nothing), the closed prompt lines at 40 and 80 columns with autowrap on (the whole prompt is readable) and the width test: every code point the sanitizer leaves alone is drawn in a pseudo-terminal and its real cursor advance never exceeds the counted width (the rule counts printable ASCII as 1 and every other code point as 2).
+- The reader and sanitizer attack corpus, and the dedupe scenario table (no edit, body edit, title edit, type edit, project override, site override, a re-run after success, a retry after `outcome_unknown`), run as unit tests.
+- Signal tests: SIGINT, SIGHUP and SIGTERM at the prompt, in the editor, during the `post-create` hook and in the write window each run `finish` (work directory removed, every `attempted` record closed, lease released, result file written); a created ticket never exits 130, 129 or 143; a failed audit write at step 6 exits 1 with the draft unchanged and no ticketctl call. Gate tests: a `ready`, `failed` or `abandoned` draft with a live agent exits 20 `live` for `--continue`, `discard` and `prune`; an agent-spawn error, a timeout and two label hits are exit 12 `lower_failed` (or `unknown` in `list`), never an orphan.
+- Tests marked `live` (never in CI) cover the verified facts above with a real `claude` on a cheap model, and also: a resume of an agent that never worked is refused by our own check; a draft session with a stub MCP server at user level; a shell profile that exports a canary variable and a Bash call from the session; the headless `--wait` result (V-17).
+
+## Dependencies
+
+`pyyaml` (config, required by design guide §3), `pydantic` (config validation, §3). Everything else is the standard library. There is no TUI, so no Textual.

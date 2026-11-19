@@ -4,45 +4,33 @@
 
 ## What this is
 
-`ticket-create` is a Layer 2 (composite) awkit tool: skill-wrapper that drafts tickets with Claude and creates them after confirmation.
-It must work fully standalone: no dependency on the `awkit` harness, a bus, a shared library or a
-shared contracts package.
+`ticket-create` is a Layer 2 (composite) awkit tool: skill-wrapper that drafts tickets with Claude and creates them after confirmation. It must work fully standalone: no dependency on the `awkit` harness, a bus, a shared library or a shared contracts package.
 
 ## Read first
 
-1. `../awkit-docs/architecture.md`: this tool's §5.2 entry and its §20 entry (constraints and open
-   topics), plus the cross-cutting sections listed in `docs/design.md`.
+1. `../awkit-docs/architecture.md`: this tool's §5.2 entry and its §20 entry (constraints and open topics), plus the cross-cutting sections listed in `docs/design.md`.
 2. `../awkit-docs/design-guide.md`: the conventions every awkit tool follows.
 3. `docs/design.md`: this tool's design doc.
 
 ## Rules
 
-- Open source: no confidential information (no company names, hostnames, ticket project keys,
-  custom-field IDs, people's names, repo or org names). Organization specifics belong in the
-  user's config.
-- Never import sibling repos. Read their docs and schemas by path only. Copying a sibling's
-  schemas into `tests/` pinned to a version is allowed.
-- No upward awareness: never know about, or behave differently for, tools that call this one.
-  Behavior may differ only by explicit arguments.
+- Open source: no confidential information (no company names, hostnames, ticket project keys, custom-field IDs, people's names, repo or org names). Organization specifics belong in the user's config.
+- Never import sibling repos. Read their docs and schemas by path only. Copying a sibling's schemas into `tests/` pinned to a version is allowed.
+- No upward awareness: never know about, or behave differently for, tools that call this one. Behavior may differ only by explicit arguments.
 - Interface first: write `docs/interface.md` and `schemas/` before implementation.
 - Semver. A breaking interface change is, before 1.0, a `feat` commit whose title names the break (never `!` before 1.0), and from 1.0 on a `!` commit; the title becomes the changelog line (details go in the PR body). Either way, update `awkit-docs/interface-registry.md`. Never hand-edit CHANGELOG.md or the version.
 - Run `make verify` before every commit.
-- All subprocess and HTTP calls go through `src/ticket_create/gateway.py`, so tests can substitute fakes
-  (fake binaries live in `tests/fakebin/`).
-- Never run destructive git commands (reset, checkout --, clean, restore, force-push) and never
-  kill processes by pattern; signal only exact PIDs this tool started (verified by PID plus start
-  time) or process groups it created for hooks.
+- All subprocess and HTTP calls go through `src/ticket_create/gateway.py`, so tests can substitute fakes (fake binaries live in `tests/fakebin/`).
+- Never run destructive git commands (reset, checkout --, clean, restore, force-push) and never kill processes by pattern; signal only exact PIDs this tool started (verified by PID plus start time) or process groups it created for hooks.
 - Untrusted or agent-generated text travels only in files or stdin, never argv or env.
 - Minimize dependencies; justify each one in `docs/design.md`.
 - The default `draft-ticket` skill lives in `plugin/skills/draft-ticket/` and is bundled as the Claude Code plugin `ticket-create`. Skills must not add their own report or escalation instructions; `claude-session exec` appends them (design guide §11).
 
 ## Workflow
 
-1. Start with a design session that resolves the open topics in `docs/design.md` and records
-   decisions there.
-2. Write `docs/interface.md` and `schemas/` (the interface spec), and register it in
-   `../awkit-docs/interface-registry.md`.
-3. Implement test-first.
+1. `docs/interface.md` is the single normative source and `docs/design.md` records the decisions; read both before changing anything. `docs/plan.md` has the staged plan.
+2. Change the interface and `schemas/` first, and keep `../awkit-docs/interface-registry.md` current.
+3. Implement test-first, one plan stage at a time.
 
 ## Repository workflow
 

@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ticket-create/cli/export.json",
+  "title": "export (JSON lines, also with --json)",
+  "description": "Each line is one audit or log record.",
+  "oneOf": [
+    {
+      "$ref": "../audit.json"
+    },
+    {
+      "$ref": "../log.json"
+    }
+  ]
+}

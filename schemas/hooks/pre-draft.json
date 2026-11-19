@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ticket-create/hooks/pre-draft.json",
+  "title": "pre-draft hook payload (stdin)",
+  "description": "Before the session launches (Draft order step 2). Exit 13 escalates, any other non-zero exit vetoes (a timeout is a veto); a new draft's row is removed, a continued draft is left as it was. No repo or labels key (the draft has a repo; it is not part of the payload). No title, body, notes or other model text.",
+  "type": "object",
+  "properties": {
+    "tool": {
+      "const": "ticket-create"
+    },
+    "hook": {
+      "const": "pre-draft"
+    },
+    "object_type": {
+      "const": "draft"
+    },
+    "object_id": {
+      "$ref": "../defs.json#/$defs/draft_id"
+    },
+    "origin": {
+      "$ref": "../defs.json#/$defs/origin"
+    },
+    "site": {
+      "$ref": "../defs.json#/$defs/site"
+    },
+    "project": {
+      "$ref": "../defs.json#/$defs/project"
+    },
+    "type": {
+      "oneOf": [
+        {
+          "$ref": "../defs.json#/$defs/type_name"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "mode": {
+      "$ref": "../defs.json#/$defs/mode"
+    },
+    "skill": {
+      "$ref": "../defs.json#/$defs/skill_name"
+    },
+    "has_seed": {
+      "type": "boolean"
+    },
+    "seed_bytes": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "continue": {
+      "type": "boolean"
+    },
+    "reads_third_party": {
+      "const": false
+    },
+    "tainted": {
+      "const": false
+    }
+  },
+  "required": [
+    "tool",
+    "hook",
+    "object_type",
+    "object_id",
+    "origin",
+    "site",
+    "project",
+    "type",
+    "mode",
+    "skill",
+    "has_seed",
+    "seed_bytes",
+    "continue",
+    "reads_third_party",
+    "tainted"
+  ],
+  "additionalProperties": false
+}

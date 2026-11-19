@@ -1,2 +1,71 @@
-# Example config for ticket-create. Location: ~/.config/ticket-create/config.yaml (drop-ins: config.d/*.yaml). Keys are defined in docs/interface.md once designed.
-hooks: {}
+# ticket-create example configuration. Location: ~/.config/ticket-create/config.yaml
+# (drop-ins in config.d/*.yaml, merged in lexical order; XDG_CONFIG_HOME is respected).
+# Every key is shown with its default; delete what you do not change.
+# Precedence: flags > repos.<id> > environment (TICKET_CREATE_<KEY>, nested keys joined with __; only mode, model, timeout, duplicates.* and retention.* are read from it) > config > defaults.
+# Unknown keys are refused.
+# Durations: seconds as a number, or a number with ms, s or m; the retention keys also accept h and d.
+
+me:
+  name: me                      # your name for human:<user> and the audit; defaults to the OS username
+
+ticketctl:
+  config: null                  # a ticketctl config file (absolute path) passed as --config
+  site: null                    # the default --site; null lets ticketctl select one
+
+skill: ticket-create:draft-ticket   # the draft skill; a replacement must follow the slot contract
+mode: interactive               # interactive or headless
+model: null                     # passed to agent-spawn; null keeps its default
+timeout: null                   # passed to agent-spawn, for example 30m; null keeps its default
+cwd: null                       # caller or session-dir; null: the caller's directory (interactive), session-dir (headless)
+sandbox: "off"                  # required, preferred or off (quoted: a bare off is a YAML boolean)
+setting_sources: []             # --setting-sources: any of user, project, local; empty loads none
+permission_profile: null        # absolute path of a permission profile; null uses the bundled one (validate warns when a replaced profile does not deny ticketctl, agent-spawn, ticket-create and mcp__*)
+env_allowlist: []               # environment variable names added to the fixed base list passed to the session
+credential_env: []              # variable names removed from the environment of hooks and the editor; list your ticketctl token variable (validate warns while empty)
+plugin_dirs: []                 # extra plugin directories (absolute, owned by you)
+
+# Template files by issue type name, or default for every type (the type is the fixed one: flag or default_type). Absolute paths owned by you.
+templates: {}
+#  default: /opt/ticket-create/templates/default.md
+#  Bug: /opt/ticket-create/templates/bug.md
+
+# Per-project settings keyed by <site>/<project key>.
+projects: {}
+#  example-site/EX:
+#    repo: git.example.test/team/service    # the repo id used when --repo is absent
+#    default_type: Task                     # the type used when none is given
+
+duplicates:
+  enabled: true                 # run the near-duplicate searches
+  limit: 10                     # hits kept, 1 to 25
+
+editor: null                    # the edit command (split with shlex, never a shell); null means $VISUAL, then $EDITOR, then vi
+
+retention:
+  open: 30d                     # lifetime of drafts that have not produced a ticket (drafting, ready, failed, abandoned)
+  done: 90d                     # lifetime of drafts that have a ticket or may have one (created, sprint_failed, unknown)
+
+limits:
+  artifact_bytes: 262144        # size cap for the draft artifact and for a --set @FILE value, 4096 to 1048576
+  title_chars: 255              # title length cap, 1 to 255
+
+# Hooks (design guide section 8). pre-draft may veto (exit 11) or escalate (exit 13);
+# the post hooks cannot undo anything and may run async. Default timeout 30 seconds.
+hooks:
+  pre-draft: []
+  post-draft: []
+  post-create: []
+  # pre-draft:
+  #   - cmd: "gatectl check draft-ticket --timeout 25"
+  #     timeout: 30
+  # post-create:
+  #   - cmd: "notice-route send --source ticket-create --stdin-json"
+  #     async: true
+
+# Per-repo overrides keyed by repo id (host/<full project path>). Only skill, templates, sandbox,
+# setting_sources, env_allowlist, plugin_dirs, permission_profile, cwd and model may be set here (never hooks, ticketctl.*, editor or credential_env).
+repos: {}
+#  git.example.test/team/service:
+#    skill: ticket-create:draft-ticket
+#    sandbox: preferred
+#    model: null

@@ -1,0 +1,1740 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ticket-create/defs.json",
+  "title": "ticket-create shared definitions",
+  "description": "Not an output on its own. Shared definitions referenced by the CLI, hook, artifact, audit and log schemas. config.json embeds its own copies.",
+  "$defs": {
+    "draft_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{32}$",
+      "description": "The draft id: 32 lowercase hex characters (128 random bits). Full match."
+    },
+    "run_token": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{32}$",
+      "description": "A fresh 128-bit run token, 32 lowercase hex characters. Full match."
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "Full match."
+    },
+    "ts": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:[.][0-9]{1,6})?Z$",
+      "description": "UTC timestamp, YYYY-MM-DDTHH:MM:SS[.ffffff]Z. Full match."
+    },
+    "count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "actor": {
+      "type": "string",
+      "pattern": "^(?:human|auto):[A-Za-z0-9._@-]{1,64}$",
+      "description": "Full match."
+    },
+    "decision_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._:@/-]{1,128}$",
+      "description": "Full match."
+    },
+    "decision_ids": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/decision_id"
+      },
+      "maxItems": 16
+    },
+    "code": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{0,63}$",
+      "description": "A closed lowercase code. Full match."
+    },
+    "env_name": {
+      "type": "string",
+      "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,127}$",
+      "description": "Full match."
+    },
+    "site": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+      "description": "A ticketctl site name. Full match."
+    },
+    "project": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9_]*$",
+      "maxLength": 128,
+      "description": "A ticket project key. Full match."
+    },
+    "ticket_key": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9_]*-[0-9]+$",
+      "maxLength": 160,
+      "description": "A ticket key, PROJECT-N. Full match."
+    },
+    "parent_key": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9_]{0,31}-[0-9]{1,12}$",
+      "description": "A parent ticket key. Full match."
+    },
+    "board": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[^\\u0000-\\u0008\\u000b-\\u001f\\u007f-\\u009f\\u00ad\\u034f\\u061c\\u115f-\\u1160\\u17b4-\\u17b5\\u180b-\\u180f\\u200b-\\u200f\\u2028-\\u202e\\u2060-\\u206f\\u2800\\u3164\\ufe00-\\ufe0f\\ufeff\\uffa0\\ufff9-\\ufffc\\u0009\\u000a]+$",
+      "description": "A board id or name as given to --board: 1 to 128 characters, no control characters.",
+      "x-untrusted": true
+    },
+    "type_name": {
+      "type": "string",
+      "pattern": "^[\\p{L}\\p{N}][\\p{L}\\p{N} _.()&/+-]{0,62}[\\p{L}\\p{N}_.()&/+-]$|^[\\p{L}\\p{N}]$",
+      "description": "An issue type name. Full match."
+    },
+    "repo_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:[.][a-z0-9](?:[a-z0-9-]*[a-z0-9])?)*(?::[0-9]{1,5})?(?:/(?![.][.]?(?:/|$))[A-Za-z0-9._-]+)+$",
+      "description": "host/<full project path>. Full match."
+    },
+    "skill_name": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "description": "A Claude Code skill name. Full match."
+    },
+    "agent_id": {
+      "type": "string",
+      "pattern": "^ag-[a-z2-7]{8}$",
+      "description": "agent-spawn's agent id. Full match."
+    },
+    "attempt_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{22}$",
+      "description": "ticket-create's own attempt id: 128 random bits, URL-safe base64 without padding. Full match."
+    },
+    "ticketctl_attempt_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "description": "ticketctl's attempt id, opaque. Full match."
+    },
+    "csession_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+      "description": "claude-session's session id of the draft's agent, opaque. Full match."
+    },
+    "dedupe_key": {
+      "type": "string",
+      "pattern": "^ticket-create:[0-9a-f]{32}(?::[1-9][0-9]{0,8})?$",
+      "description": "The ticketctl dedupe key of a generation g: ticket-create:<draft_id> for g = 0, ticket-create:<draft_id>:<g> for g > 0. Full match."
+    },
+    "event_id": {
+      "type": "string",
+      "pattern": "^ev-[a-z2-7]{16}$",
+      "description": "ev- plus 16 lowercase base32 characters, fresh for every hook invocation. Full match."
+    },
+    "url": {
+      "type": "string",
+      "pattern": "^https?://[^\\s]+$",
+      "maxLength": 2048,
+      "x-untrusted": true,
+      "description": "A ticket URL reported by the ticket system. Full match."
+    },
+    "status": {
+      "enum": [
+        "drafting",
+        "ready",
+        "failed",
+        "abandoned",
+        "created",
+        "sprint_failed",
+        "unknown"
+      ],
+      "description": "Stored draft status."
+    },
+    "list_status": {
+      "enum": [
+        "drafting",
+        "ready",
+        "failed",
+        "abandoned",
+        "created",
+        "sprint_failed",
+        "unknown",
+        "orphan"
+      ],
+      "description": "list adds the presentation-only value orphan."
+    },
+    "origin": {
+      "enum": [
+        "interactive",
+        "headless"
+      ]
+    },
+    "mode": {
+      "enum": [
+        "interactive",
+        "headless"
+      ]
+    },
+    "session_outcome": {
+      "enum": [
+        "done",
+        "blocked",
+        "needs-input",
+        "failed",
+        "exited-unreported",
+        "killed",
+        "timeout",
+        "lost",
+        "not-started",
+        "vetoed",
+        "escalated"
+      ],
+      "description": "agent-spawn's run outcome."
+    },
+    "session_phase": {
+      "enum": [
+        "launch",
+        "session"
+      ]
+    },
+    "end_reason": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{0,63}$",
+      "description": "agent-spawn's end reason, a closed lowercase code. Full match."
+    },
+    "sandbox_level": {
+      "enum": [
+        "required",
+        "preferred",
+        "off"
+      ]
+    },
+    "failure_code": {
+      "enum": [
+        "artifact_missing",
+        "artifact_invalid",
+        "implicit_done",
+        "needs_human",
+        "outcome",
+        "no_report",
+        "launch_failed"
+      ]
+    },
+    "failure_detail": {
+      "enum": [
+        "frozen_file",
+        "json",
+        "schema",
+        "draft_id",
+        "run_token",
+        "field"
+      ]
+    },
+    "failure": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/failure_code"
+        },
+        "outcome": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/session_outcome"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "detail": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/failure_detail"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "code",
+        "outcome"
+      ],
+      "additionalProperties": false
+    },
+    "sprint_selector": {
+      "type": "string",
+      "pattern": "^(?:open|next|[0-9]{1,18})$",
+      "description": "open, next or a sprint id as given to --sprint. Full match."
+    },
+    "sprint_id": {
+      "type": "string",
+      "pattern": "^[0-9]{1,18}$",
+      "description": "A sprint id. Full match."
+    },
+    "sprint": {
+      "type": "object",
+      "properties": {
+        "selector": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/sprint_selector"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "id": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/sprint_id"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "name": {
+          "oneOf": [
+            {
+              "type": "string",
+              "maxLength": 256,
+              "description": "Sprint name from the ticket system.",
+              "x-untrusted": true
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "board": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/board"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "step": {
+          "$ref": "#/$defs/sprint_step"
+        }
+      },
+      "required": [
+        "selector",
+        "id",
+        "name",
+        "board",
+        "step"
+      ],
+      "additionalProperties": false,
+      "description": "The sprint choice: the selector (null until a sprint is requested) and, once resolved, the id and name, the board and the step state."
+    },
+    "sprint_step": {
+      "enum": [
+        "none",
+        "pending",
+        "done",
+        "failed"
+      ],
+      "description": "none: no sprint requested; pending: the ticket exists and the sprint step has not finished; done; failed."
+    },
+    "attempt_outcome": {
+      "enum": [
+        "created",
+        "reused",
+        "unknown",
+        "failed"
+      ]
+    },
+    "generation": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1000000,
+      "description": "0 at first; create --again adds 1."
+    },
+    "overrides": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "title",
+          "body",
+          "type",
+          "project",
+          "site",
+          "parent",
+          "assignee",
+          "labels",
+          "sprint",
+          "fields"
+        ]
+      },
+      "maxItems": 10,
+      "uniqueItems": true,
+      "description": "What the human changed: the closed list of names."
+    },
+    "attempt": {
+      "type": "object",
+      "properties": {
+        "n": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "generation": {
+          "$ref": "#/$defs/generation"
+        },
+        "key": {
+          "$ref": "#/$defs/dedupe_key"
+        },
+        "site": {
+          "$ref": "#/$defs/site"
+        },
+        "project": {
+          "$ref": "#/$defs/project"
+        },
+        "plan_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "body_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "started_at": {
+          "$ref": "#/$defs/ts"
+        },
+        "outcome": {
+          "$ref": "#/$defs/attempt_outcome"
+        },
+        "attempt_id": {
+          "$ref": "#/$defs/attempt_id"
+        },
+        "ticketctl_attempt_id": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/ticketctl_attempt_id"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "ticket_key": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/ticket_key"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "n",
+        "generation",
+        "key",
+        "site",
+        "project",
+        "plan_sha256",
+        "body_sha256",
+        "started_at",
+        "outcome",
+        "attempt_id",
+        "ticketctl_attempt_id",
+        "ticket_key"
+      ],
+      "additionalProperties": false,
+      "description": "One call of ticketctl create --yes recorded in the draft; the outcome starts as unknown."
+    },
+    "field_name": {
+      "type": "string",
+      "pattern": "^[A-Za-z][A-Za-z0-9 _.-]{0,99}$",
+      "not": {
+        "pattern": "^(?:[Tt][Ii][Tt][Ll][Ee]|[Ss][Uu][Mm][Mm][Aa][Rr][Yy]|[Dd][Ee][Ss][Cc][Rr][Ii][Pp][Tt][Ii][Oo][Nn]|[Ll][Aa][Bb][Ee][Ll][Ss]|[Aa][Ss][Ss][Ii][Gg][Nn][Ee][Ee]|[Pp][Aa][Rr][Ee][Nn][Tt]|[Ee][Pp][Ii][Cc]|[Ss][Pp][Rr][Ii][Nn][Tt]|[Rr][Ee][Ss][Oo][Ll][Uu][Tt][Ii][Oo][Nn]|[Rr][Ee][Pp][Oo][Rr][Tt][Ee][Rr])$"
+      },
+      "description": "A field's logical name: 1 to 100 characters from A-Za-z0-9 space _ . -, starting with a letter, and not (case-insensitively) title, summary, description, labels, assignee, parent, epic, sprint, resolution or reporter (epic is ticketctl's logical name that sets the parent).",
+      "x-untrusted": true
+    },
+    "field_value": {
+      "oneOf": [
+        {
+          "type": "string",
+          "maxLength": 8192,
+          "pattern": "^[^\\u0000-\\u0008\\u000b-\\u001f\\u007f-\\u009f\\u00ad\\u034f\\u061c\\u115f-\\u1160\\u17b4-\\u17b5\\u180b-\\u180f\\u200b-\\u200f\\u2028-\\u202e\\u2060-\\u206f\\u2800\\u3164\\ufe00-\\ufe0f\\ufeff\\uffa0\\ufff9-\\ufffc]*$",
+          "description": "Full match.",
+          "x-untrusted": true
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 8192,
+            "pattern": "^[^\\u0000-\\u0008\\u000b-\\u001f\\u007f-\\u009f\\u00ad\\u034f\\u061c\\u115f-\\u1160\\u17b4-\\u17b5\\u180b-\\u180f\\u200b-\\u200f\\u2028-\\u202e\\u2060-\\u206f\\u2800\\u3164\\ufe00-\\ufe0f\\ufeff\\uffa0\\ufff9-\\ufffc]*$",
+            "description": "Full match.",
+            "x-untrusted": true
+          },
+          "maxItems": 50
+        }
+      ],
+      "description": "A string of at most 8192 characters, a finite number whose decimal form matches ^-?[0-9]+(\\.[0-9]+)?$ (the reader rejects exponent forms), or an array of at most 50 strings."
+    },
+    "fields": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/$defs/field_name"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/field_value"
+      },
+      "maxProperties": 20
+    },
+    "ticket_labels": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$",
+        "description": "Full match."
+      },
+      "maxItems": 20,
+      "description": "Ticket (Jira) labels; never agent labels."
+    },
+    "assignee": {
+      "type": "string",
+      "pattern": "^(?:me|none|[A-Za-z0-9][A-Za-z0-9:_.-]{0,127})$",
+      "description": "me, none or an account id. Full match."
+    },
+    "title": {
+      "type": "string",
+      "maxLength": 255,
+      "minLength": 1,
+      "pattern": "^[^\\u0000-\\u0008\\u000b-\\u001f\\u007f-\\u009f\\u00ad\\u034f\\u061c\\u115f-\\u1160\\u17b4-\\u17b5\\u180b-\\u180f\\u200b-\\u200f\\u2028-\\u202e\\u2060-\\u206f\\u2800\\u3164\\ufe00-\\ufe0f\\ufeff\\uffa0\\ufff9-\\ufffc\\u0009\\u000a]+$",
+      "description": "One line, 1 to limits.title_chars (at most 255) characters. Full match.",
+      "x-untrusted": true
+    },
+    "body_md": {
+      "type": "string",
+      "maxLength": 29000,
+      "pattern": "^[^\\u0000-\\u0008\\u000b-\\u001f\\u007f-\\u009f\\u00ad\\u034f\\u061c\\u115f-\\u1160\\u17b4-\\u17b5\\u180b-\\u180f\\u200b-\\u200f\\u2028-\\u202e\\u2060-\\u206f\\u2800\\u3164\\ufe00-\\ufe0f\\ufeff\\uffa0\\ufff9-\\ufffc]*$",
+      "description": "Markdown, at most 29000 characters. Full match.",
+      "x-untrusted": true
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 4096,
+      "pattern": "^[^\\u0000-\\u0008\\u000b-\\u001f\\u007f-\\u009f\\u00ad\\u034f\\u061c\\u115f-\\u1160\\u17b4-\\u17b5\\u180b-\\u180f\\u200b-\\u200f\\u2028-\\u202e\\u2060-\\u206f\\u2800\\u3164\\ufe00-\\ufe0f\\ufeff\\uffa0\\ufff9-\\ufffc]*$",
+      "description": "Shown to the human. Full match.",
+      "x-untrusted": true
+    },
+    "sizes": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "body": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "title",
+        "body"
+      ],
+      "additionalProperties": false,
+      "description": "Character counts."
+    },
+    "warning_code": {
+      "anyOf": [
+        {
+          "enum": [
+            "duplicate_candidates",
+            "body_near_limit",
+            "body_differs",
+            "previous_attempt_unknown",
+            "plan_differs",
+            "fixed_field_changed",
+            "assignee_account",
+            "form_facts_unavailable",
+            "credential_env_empty",
+            "existing_differs",
+            "mcp_inherited",
+            "profile_missing_deny",
+            "skill_unchecked"
+          ]
+        },
+        {
+          "$ref": "#/$defs/code"
+        }
+      ],
+      "description": "ticket-create's closed warning codes, or a ticketctl plan warning code passed through (a closed lowercase code)."
+    },
+    "warning": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/warning_code"
+        },
+        "message": {
+          "type": "string",
+          "maxLength": 4096,
+          "x-untrusted": true
+        }
+      },
+      "required": [
+        "code"
+      ],
+      "additionalProperties": false,
+      "description": "A warning: a closed code and optional sanitized text (duplicate hits carry ticketctl's key and title)."
+    },
+    "required_field": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "maxLength": 100,
+          "x-untrusted": true
+        },
+        "kind": {
+          "type": "string",
+          "maxLength": 64,
+          "x-untrusted": true
+        },
+        "allowed_values": {
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 256,
+                "x-untrusted": true
+              },
+              "maxItems": 200
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "name",
+        "kind"
+      ],
+      "additionalProperties": false,
+      "description": "A field ticketctl needs, as reported by create --dry-run."
+    },
+    "seed": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/type_name"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "parent": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/parent_key"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "ticket_labels": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/ticket_labels"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "has_seed": {
+          "type": "boolean"
+        },
+        "seed_bytes": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "type",
+        "parent",
+        "ticket_labels",
+        "has_seed",
+        "seed_bytes"
+      ],
+      "additionalProperties": false,
+      "description": "What draft was given: the fixed type, parent and ticket labels (null when not given) and the size of the idea text (the text itself is never stored). Written once with the row."
+    },
+    "draft_warning": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/warning_code"
+        },
+        "field": {
+          "enum": [
+            "type",
+            "parent",
+            "ticket_labels"
+          ]
+        },
+        "value": {
+          "oneOf": [
+            {
+              "type": "string",
+              "maxLength": 1400,
+              "description": "The artifact's dropped value, model-written, stored whole (for ticket_labels the artifact's labels joined with a comma and a space); null when the artifact omitted the field.",
+              "x-untrusted": true
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "code",
+        "field",
+        "value"
+      ],
+      "additionalProperties": false,
+      "description": "A draft-time warning stored with the draft (today only fixed_field_changed); replaced at every T5."
+    },
+    "draft": {
+      "type": "object",
+      "properties": {
+        "draft_id": {
+          "$ref": "#/$defs/draft_id"
+        },
+        "status": {
+          "$ref": "#/$defs/status"
+        },
+        "origin": {
+          "$ref": "#/$defs/origin"
+        },
+        "created_at": {
+          "$ref": "#/$defs/ts"
+        },
+        "updated_at": {
+          "$ref": "#/$defs/ts"
+        },
+        "site": {
+          "$ref": "#/$defs/site"
+        },
+        "project": {
+          "$ref": "#/$defs/project"
+        },
+        "repo": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/repo_id"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "type": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/type_name"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "title": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/title"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "body_md": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/body_md"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "sizes": {
+          "$ref": "#/$defs/sizes"
+        },
+        "body_sha256": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/sha256"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "parent": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/parent_key"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "assignee": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/assignee"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "ticket_labels": {
+          "$ref": "#/$defs/ticket_labels"
+        },
+        "fields": {
+          "$ref": "#/$defs/fields"
+        },
+        "notes": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/notes"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "overrides": {
+          "$ref": "#/$defs/overrides"
+        },
+        "seed": {
+          "$ref": "#/$defs/seed"
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/draft_warning"
+          },
+          "maxItems": 20
+        },
+        "agent_id": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/agent_id"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "artifact": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "sha256": {
+                  "$ref": "#/$defs/sha256"
+                },
+                "size": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "required": [
+                "sha256",
+                "size"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "failure": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/failure"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "generation": {
+          "$ref": "#/$defs/generation"
+        },
+        "created_key": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/ticket_key"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "created_url": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/url"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "sprint": {
+          "$ref": "#/$defs/sprint"
+        },
+        "attempts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/attempt"
+          },
+          "maxItems": 1000
+        }
+      },
+      "required": [
+        "draft_id",
+        "status",
+        "origin",
+        "created_at",
+        "updated_at",
+        "site",
+        "project",
+        "repo",
+        "type",
+        "title",
+        "sizes",
+        "body_sha256",
+        "parent",
+        "assignee",
+        "ticket_labels",
+        "fields",
+        "notes",
+        "overrides",
+        "seed",
+        "warnings",
+        "agent_id",
+        "artifact",
+        "failure",
+        "generation",
+        "created_key",
+        "created_url",
+        "sprint",
+        "attempts"
+      ],
+      "additionalProperties": false,
+      "description": "The stored draft as printed by show (never the run token). body_md only with --body."
+    },
+    "draft_summary": {
+      "type": "object",
+      "properties": {
+        "draft_id": {
+          "$ref": "#/$defs/draft_id"
+        },
+        "status": {
+          "$ref": "#/$defs/status"
+        },
+        "origin": {
+          "$ref": "#/$defs/origin"
+        },
+        "site": {
+          "$ref": "#/$defs/site"
+        },
+        "project": {
+          "$ref": "#/$defs/project"
+        },
+        "type": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/type_name"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "created_key": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/ticket_key"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "created_url": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/url"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "attempts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/attempt"
+          },
+          "maxItems": 1000
+        }
+      },
+      "required": [
+        "draft_id",
+        "status",
+        "origin",
+        "site",
+        "project",
+        "type",
+        "created_key",
+        "created_url",
+        "attempts"
+      ],
+      "additionalProperties": false,
+      "description": "The draft as carried in a draft or create result."
+    },
+    "session_result": {
+      "type": "object",
+      "properties": {
+        "agent_id": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/agent_id"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "phase": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/session_phase"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "outcome": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/session_outcome"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "end_reason": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/end_reason"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "first_working_at": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/ts"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "agent_id",
+        "phase",
+        "outcome",
+        "end_reason",
+        "first_working_at"
+      ],
+      "additionalProperties": false,
+      "description": "The draft session's run, as agent-spawn reports it."
+    },
+    "draft_plan": {
+      "type": "object",
+      "properties": {
+        "site": {
+          "$ref": "#/$defs/site"
+        },
+        "project": {
+          "$ref": "#/$defs/project"
+        },
+        "repo": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/repo_id"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "type": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/type_name"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "skill": {
+          "$ref": "#/$defs/skill_name"
+        },
+        "mode": {
+          "$ref": "#/$defs/mode"
+        },
+        "kind_check": {
+          "type": "object",
+          "properties": {
+            "ok": {
+              "type": "boolean"
+            },
+            "kind": {
+              "type": "string",
+              "maxLength": 64
+            },
+            "reads_third_party": {
+              "oneOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "warnings": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "ok",
+            "kind",
+            "reads_third_party",
+            "warnings"
+          ],
+          "additionalProperties": false
+        },
+        "prefetch": {
+          "type": "object",
+          "properties": {
+            "allowed_types": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "required_fields": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "duplicates": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "parent": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1
+            }
+          },
+          "required": [
+            "allowed_types",
+            "required_fields",
+            "duplicates",
+            "parent"
+          ],
+          "additionalProperties": false
+        },
+        "prompt_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "session": {
+          "type": "object",
+          "properties": {
+            "placement": {
+              "oneOf": [
+                {
+                  "enum": [
+                    "here",
+                    "window"
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "worktree": {
+              "enum": [
+                "none"
+              ]
+            },
+            "sandbox": {
+              "$ref": "#/$defs/sandbox_level"
+            },
+            "model": {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "maxLength": 128
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "timeout": {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "maxLength": 32
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "setting_sources": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 32
+              },
+              "maxItems": 8
+            }
+          },
+          "required": [
+            "placement",
+            "worktree",
+            "sandbox",
+            "model",
+            "timeout",
+            "setting_sources"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "site",
+        "project",
+        "repo",
+        "type",
+        "skill",
+        "mode",
+        "kind_check",
+        "prefetch",
+        "prompt_bytes",
+        "session"
+      ],
+      "additionalProperties": false,
+      "description": "draft --dry-run: what would be launched."
+    },
+    "create_plan": {
+      "type": "object",
+      "properties": {
+        "state": {
+          "enum": [
+            "ready",
+            "already_created",
+            "blocked"
+          ]
+        },
+        "plan_sha256": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/sha256"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "site": {
+          "$ref": "#/$defs/site"
+        },
+        "project": {
+          "$ref": "#/$defs/project"
+        },
+        "repo": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/repo_id"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "type": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/type_name"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "title": {
+          "oneOf": [
+            {
+              "type": "string",
+              "maxLength": 255,
+              "x-untrusted": true
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "parent": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/parent_key"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "assignee": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/assignee"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "ticket_labels": {
+          "$ref": "#/$defs/ticket_labels"
+        },
+        "field_names": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/field_name"
+          },
+          "maxItems": 20
+        },
+        "sprint": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/sprint"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "overridden": {
+          "$ref": "#/$defs/overrides"
+        },
+        "origin": {
+          "$ref": "#/$defs/origin"
+        },
+        "generation": {
+          "$ref": "#/$defs/generation"
+        },
+        "dedupe_key": {
+          "$ref": "#/$defs/dedupe_key"
+        },
+        "existing_key": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/ticket_key"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "existing_ticket": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "x-untrusted": true
+                },
+                "title": {
+                  "type": "string",
+                  "maxLength": 255,
+                  "x-untrusted": true
+                }
+              },
+              "required": [
+                "type",
+                "title"
+              ],
+              "additionalProperties": false,
+              "description": "The existing ticket's type and title, read with ticketctl get (already_created state with a known key)."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "blocked": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "reason": {
+                  "$ref": "#/$defs/code"
+                },
+                "required_fields": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/required_field"
+                  },
+                  "maxItems": 200
+                }
+              },
+              "required": [
+                "reason"
+              ],
+              "additionalProperties": false,
+              "description": "Why the screen cannot create: ticketctl's reason, and the fields to supply when it lists them."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "state",
+        "plan_sha256",
+        "site",
+        "project",
+        "repo",
+        "type",
+        "title",
+        "parent",
+        "assignee",
+        "ticket_labels",
+        "field_names",
+        "sprint",
+        "overridden",
+        "origin",
+        "generation",
+        "dedupe_key",
+        "existing_key",
+        "existing_ticket",
+        "blocked"
+      ],
+      "additionalProperties": false,
+      "description": "The resolved create plan: the facts the review screen shows, without body text."
+    },
+    "ticket_result": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "$ref": "#/$defs/ticket_key"
+        },
+        "url": {
+          "$ref": "#/$defs/url"
+        },
+        "reused": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "key",
+        "url",
+        "reused"
+      ],
+      "additionalProperties": false
+    },
+    "step": {
+      "enum": [
+        "create",
+        "sprint_dry_run",
+        "sprint_add"
+      ]
+    },
+    "hook_name": {
+      "enum": [
+        "pre-draft",
+        "post-draft",
+        "post-create"
+      ]
+    },
+    "lower_error": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/code"
+        },
+        "message": {
+          "type": "string",
+          "maxLength": 4096,
+          "x-untrusted": true
+        },
+        "reason": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/code"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "details": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "code"
+      ],
+      "additionalProperties": false,
+      "description": "A lower tool's error object, passed through."
+    },
+    "error_code": {
+      "enum": [
+        "internal",
+        "usage",
+        "invalid_config",
+        "draft_not_found",
+        "ambiguous_draft",
+        "ambiguous",
+        "vetoed",
+        "escalated",
+        "needs_human",
+        "tool_missing",
+        "tool_too_old",
+        "skill_not_found",
+        "unavailable",
+        "lower_failed",
+        "outcome_unknown",
+        "partial",
+        "schema_newer",
+        "session_exited_unreported",
+        "session_killed",
+        "session_timeout",
+        "session_lost",
+        "session_failed",
+        "refused",
+        "artifact_missing",
+        "artifact_invalid",
+        "invalid_ticket_input",
+        "missing_required_fields"
+      ]
+    },
+    "error_reason": {
+      "enum": [
+        "stdin_conflict",
+        "invalid_combination",
+        "missing_seed",
+        "human_only",
+        "invalid_argument",
+        "missing_option",
+        "no_terminal",
+        "invalid_config",
+        "input_changed",
+        "declined",
+        "draft_not_ready",
+        "draft_not_resumable",
+        "already_created",
+        "live",
+        "sprint_closed",
+        "no_sprint",
+        "attempt_recorded",
+        "locked",
+        "artifact_missing",
+        "artifact_invalid",
+        "missing_required_fields",
+        "invalid_ticket_input"
+      ],
+      "description": "Non-null for exits 2, 20 and 22."
+    },
+    "error_details": {
+      "type": "object",
+      "properties": {
+        "candidates": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 256,
+            "x-untrusted": true
+          },
+          "maxItems": 200,
+          "description": "Draft ids, or sites, boards or sprints."
+        },
+        "required_fields": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/required_field"
+          },
+          "maxItems": 200
+        },
+        "existing_key": {
+          "$ref": "#/$defs/ticket_key"
+        },
+        "plan": {
+          "$ref": "#/$defs/create_plan"
+        },
+        "attempt": {
+          "$ref": "#/$defs/attempt"
+        },
+        "lower_error": {
+          "$ref": "#/$defs/lower_error"
+        },
+        "hook": {
+          "$ref": "#/$defs/hook_name"
+        },
+        "hook_stderr": {
+          "type": "string",
+          "maxLength": 4096,
+          "x-untrusted": true
+        },
+        "key": {
+          "$ref": "#/$defs/ticket_key"
+        },
+        "step": {
+          "$ref": "#/$defs/step"
+        },
+        "tool": {
+          "enum": [
+            "ticketctl",
+            "agent-spawn",
+            "claude-session",
+            "wtctl"
+          ]
+        },
+        "minimum": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "found": {
+          "oneOf": [
+            {
+              "type": "string",
+              "maxLength": 64
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "install": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "config_key": {
+          "type": "string",
+          "maxLength": 256
+        }
+      },
+      "required": [],
+      "additionalProperties": false,
+      "description": "Ids, enums and counts; message-like members are untrusted."
+    },
+    "error_body": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/error_code"
+        },
+        "message": {
+          "type": "string",
+          "maxLength": 4096,
+          "x-untrusted": true
+        },
+        "reason": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/error_reason"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "outcome_unknown": {
+          "type": "boolean"
+        },
+        "draft_id": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/draft_id"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "details": {
+          "$ref": "#/$defs/error_details"
+        }
+      },
+      "required": [
+        "code",
+        "message",
+        "reason",
+        "retryable",
+        "outcome_unknown",
+        "draft_id",
+        "details"
+      ],
+      "additionalProperties": false
+    },
+    "command_name": {
+      "enum": [
+        "draft",
+        "create",
+        "list",
+        "show",
+        "discard",
+        "prune",
+        "validate",
+        "export"
+      ]
+    }
+  }
+}

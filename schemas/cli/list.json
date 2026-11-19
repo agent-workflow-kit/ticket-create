@@ -1,0 +1,125 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ticket-create/cli/list.json",
+  "title": "list --json",
+  "type": "object",
+  "properties": {
+    "drafts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "draft_id": {
+            "$ref": "../defs.json#/$defs/draft_id"
+          },
+          "status": {
+            "$ref": "../defs.json#/$defs/list_status"
+          },
+          "origin": {
+            "$ref": "../defs.json#/$defs/origin"
+          },
+          "site": {
+            "$ref": "../defs.json#/$defs/site"
+          },
+          "project": {
+            "$ref": "../defs.json#/$defs/project"
+          },
+          "type": {
+            "oneOf": [
+              {
+                "$ref": "../defs.json#/$defs/type_name"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": {
+            "oneOf": [
+              {
+                "$ref": "../defs.json#/$defs/title"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "failure": {
+            "oneOf": [
+              {
+                "$ref": "../defs.json#/$defs/failure"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_key": {
+            "oneOf": [
+              {
+                "$ref": "../defs.json#/$defs/ticket_key"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "agent_id": {
+            "oneOf": [
+              {
+                "$ref": "../defs.json#/$defs/agent_id"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "agent": {
+            "oneOf": [
+              {
+                "enum": [
+                  "live",
+                  "parked",
+                  "none",
+                  "unknown"
+                ],
+                "description": "The agent's state as found by its stored id, else by label and kind; null with --no-agents."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_at": {
+            "$ref": "../defs.json#/$defs/ts"
+          },
+          "updated_at": {
+            "$ref": "../defs.json#/$defs/ts"
+          }
+        },
+        "required": [
+          "draft_id",
+          "status",
+          "origin",
+          "site",
+          "project",
+          "type",
+          "title",
+          "failure",
+          "created_key",
+          "agent_id",
+          "agent",
+          "created_at",
+          "updated_at"
+        ],
+        "additionalProperties": false,
+        "description": "One draft row; orphan is a presentation of a drafting row whose lease is free."
+      },
+      "maxItems": 500
+    }
+  },
+  "required": [
+    "drafts"
+  ],
+  "additionalProperties": false
+}

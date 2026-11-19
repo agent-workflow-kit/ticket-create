@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ticket-create/cli/show.json",
+  "title": "show --json",
+  "type": "object",
+  "properties": {
+    "draft": {
+      "$ref": "../defs.json#/$defs/draft"
+    }
+  },
+  "required": [
+    "draft"
+  ],
+  "additionalProperties": false
+}
