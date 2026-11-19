@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "ticket-create/cli/validate.json",
   "title": "validate --json",
-  "description": "Exits 0 whenever the checks ran; a failed check is data.",
+  "description": "Exits 0 whenever the checks ran, except a config that does not load (exit 2) and a missing sibling (exit 12 tool_missing; with --probe also tool_too_old); any other failed check is data.",
   "type": "object",
   "properties": {
     "valid": {
@@ -53,6 +53,15 @@
       },
       "maxItems": 50
     },
+    "profile_denies": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 256
+      },
+      "maxItems": 200,
+      "description": "The resolved permission profile's denies."
+    },
     "warnings": {
       "type": "array",
       "items": {
@@ -65,6 +74,7 @@
     "valid",
     "probe",
     "checks",
+    "profile_denies",
     "warnings"
   ],
   "additionalProperties": false

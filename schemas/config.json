@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "ticket-create/config.json",
   "title": "ticket-create config",
-  "description": "Merged config (config.yaml plus config.d drop-ins). Unknown keys are refused. Self-contained: no external $ref.",
+  "description": "Merged config (config.yaml plus config.d drop-ins). Unknown keys are refused. Environment variables (TICKET_CREATE_<KEY>) set only mode, model, timeout, duplicates.enabled, duplicates.limit and retention.*. Self-contained: no external $ref.",
   "type": "object",
   "properties": {
     "me": {
@@ -89,16 +89,17 @@
     "cwd": {
       "oneOf": [
         {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 4096
+          "enum": [
+            "caller",
+            "session-dir"
+          ]
         },
         {
           "type": "null"
         }
       ],
       "default": null,
-      "description": "The session's working directory (an absolute path or session-dir); null means the caller's directory (interactive) or session-dir (headless)."
+      "description": "The session's working directory: caller or session-dir; null means the caller's directory (interactive) or session-dir (headless)."
     },
     "sandbox": {
       "$ref": "#/$defs/sandbox_level",
@@ -138,6 +139,15 @@
       "default": [],
       "description": "Names added to the fixed base list of --env-allowlist-only."
     },
+    "credential_env": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/env_name"
+      },
+      "uniqueItems": true,
+      "default": [],
+      "description": "Environment variable names removed from the environment of hooks and the editor (list the ticketctl token variable); validate warns while the list is empty. Not settable per repo."
+    },
     "plugin_dirs": {
       "type": "array",
       "items": {
@@ -162,7 +172,7 @@
       "type": "object",
       "propertyNames": {
         "type": "string",
-        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}/[A-Z][A-Z0-9_]{1,19}$"
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}/[A-Z][A-Z0-9_]*$"
       },
       "additionalProperties": {
         "type": "object",
@@ -249,9 +259,9 @@
       "properties": {
         "artifact_bytes": {
           "type": "integer",
-          "minimum": 1024,
+          "minimum": 4096,
           "maximum": 1048576,
-          "default": 65536
+          "default": 262144
         },
         "title_chars": {
           "type": "integer",
@@ -362,16 +372,17 @@
           "cwd": {
             "oneOf": [
               {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 4096
+                "enum": [
+                  "caller",
+                  "session-dir"
+                ]
               },
               {
                 "type": "null"
               }
             ],
             "default": null,
-            "description": "The session's working directory (an absolute path or session-dir); null means the caller's directory (interactive) or session-dir (headless)."
+            "description": "The session's working directory: caller or session-dir; null means the caller's directory (interactive) or session-dir (headless)."
           },
           "model": {
             "oneOf": [
@@ -407,11 +418,11 @@
     },
     "site": {
       "type": "string",
-      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$"
     },
     "project": {
       "type": "string",
-      "pattern": "^[A-Z][A-Z0-9_]{1,19}$"
+      "pattern": "^[A-Z][A-Z0-9_]*$"
     },
     "type_name": {
       "type": "string",

@@ -15,7 +15,6 @@
           "object_type": {
             "enum": [
               "draft",
-              "agent",
               "tmp_file"
             ]
           },

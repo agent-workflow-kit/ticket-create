@@ -15,7 +15,8 @@
           "result": {
             "enum": [
               "discarded",
-              "refused"
+              "refused",
+              "teardown_failed"
             ]
           },
           "reason": {
@@ -34,13 +35,24 @@
               "torn_down",
               "teardown_failed"
             ]
+          },
+          "csession_id": {
+            "oneOf": [
+              {
+                "$ref": "../defs.json#/$defs/csession_id"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
           "draft_id",
           "result",
           "reason",
-          "agent"
+          "agent",
+          "csession_id"
         ],
         "additionalProperties": false
       },

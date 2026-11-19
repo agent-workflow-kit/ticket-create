@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "ticket-create/audit.json",
   "title": "ticket-create audit.jsonl record",
-  "description": "Public, append-only. An attempted record before each ticketctl create --yes and sprint add --yes call and an outcome record after it, paired by attempt_id, plus one outcome record per draft run. No title, body, notes or model text, no secrets.",
+  "description": "Public, append-only. An attempted record before each ticketctl create --yes and sprint add --yes call and an outcome record after it, paired by attempt_id (ticket-create's own; null on a draft run record), plus one outcome record per draft run. No title, body, notes or model text, no secrets.",
   "type": "object",
   "properties": {
     "ts": {
@@ -19,7 +19,14 @@
       ]
     },
     "attempt_id": {
-      "$ref": "defs.json#/$defs/attempt_id"
+      "oneOf": [
+        {
+          "$ref": "defs.json#/$defs/attempt_id"
+        },
+        {
+          "type": "null"
+        }
+      ]
     },
     "actor": {
       "$ref": "defs.json#/$defs/actor"
@@ -48,7 +55,7 @@
       "oneOf": [
         {
           "type": "string",
-          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}/[A-Z][A-Z0-9_]{1,19}$",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}/[A-Z][A-Z0-9_]*$",
           "description": "<site>/<project>"
         },
         {
@@ -75,12 +82,24 @@
           "$ref": "defs.json#/$defs/origin"
         },
         "overrides": {
-          "type": "array",
-          "items": {
-            "$ref": "defs.json#/$defs/field_name"
-          },
-          "maxItems": 64,
-          "uniqueItems": true
+          "$ref": "defs.json#/$defs/overrides"
+        },
+        "override_count": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 64
+        },
+        "override_escalation": {
+          "oneOf": [
+            {
+              "enum": [
+                "ticketctl"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "agent_id": {
           "$ref": "defs.json#/$defs/agent_id"
@@ -118,8 +137,17 @@
               ]
             },
             "outcome": {
-              "type": "string",
-              "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+              "enum": [
+                "attempted",
+                "created",
+                "reused",
+                "accepted",
+                "failed",
+                "unknown",
+                "done",
+                "ready",
+                "abandoned"
+              ]
             },
             "code": {
               "oneOf": [

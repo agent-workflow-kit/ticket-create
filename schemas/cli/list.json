@@ -10,47 +10,19 @@
         "type": "object",
         "properties": {
           "draft_id": {
-            "oneOf": [
-              {
-                "$ref": "../defs.json#/$defs/draft_id"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "$ref": "../defs.json#/$defs/draft_id"
           },
           "status": {
             "$ref": "../defs.json#/$defs/list_status"
           },
           "origin": {
-            "oneOf": [
-              {
-                "$ref": "../defs.json#/$defs/origin"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "$ref": "../defs.json#/$defs/origin"
           },
           "site": {
-            "oneOf": [
-              {
-                "$ref": "../defs.json#/$defs/site"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "$ref": "../defs.json#/$defs/site"
           },
           "project": {
-            "oneOf": [
-              {
-                "$ref": "../defs.json#/$defs/project"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "$ref": "../defs.json#/$defs/project"
           },
           "type": {
             "oneOf": [
@@ -66,6 +38,16 @@
             "oneOf": [
               {
                 "$ref": "../defs.json#/$defs/title"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "failure": {
+            "oneOf": [
+              {
+                "$ref": "../defs.json#/$defs/failure"
               },
               {
                 "type": "null"
@@ -93,24 +75,10 @@
             ]
           },
           "created_at": {
-            "oneOf": [
-              {
-                "$ref": "../defs.json#/$defs/ts"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "$ref": "../defs.json#/$defs/ts"
           },
           "updated_at": {
-            "oneOf": [
-              {
-                "$ref": "../defs.json#/$defs/ts"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "$ref": "../defs.json#/$defs/ts"
           }
         },
         "required": [
@@ -121,13 +89,14 @@
           "project",
           "type",
           "title",
+          "failure",
           "created_key",
           "agent_id",
           "created_at",
           "updated_at"
         ],
         "additionalProperties": false,
-        "description": "An orphan row (an agent found by label) may have no draft row, so most members are nullable."
+        "description": "One draft row; orphan is a presentation of a drafting row whose lease is free."
       },
       "maxItems": 500
     }

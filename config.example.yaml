@@ -1,7 +1,7 @@
 # ticket-create example configuration. Location: ~/.config/ticket-create/config.yaml
 # (drop-ins in config.d/*.yaml, merged in lexical order; XDG_CONFIG_HOME is respected).
 # Every key is shown with its default; delete what you do not change.
-# Precedence: flags > repos.<id> > environment (TICKET_CREATE_<KEY>, nested keys joined with __) > config > defaults.
+# Precedence: flags > repos.<id> > environment (TICKET_CREATE_<KEY>, nested keys joined with __; only mode, model, timeout, duplicates.* and retention.* are read from it) > config > defaults.
 # Unknown keys are refused.
 # Durations: seconds as a number, or a number with ms, s or m; the retention keys also accept h and d.
 
@@ -16,14 +16,15 @@ skill: ticket-create:draft-ticket   # the draft skill; a replacement must follow
 mode: interactive               # interactive or headless
 model: null                     # passed to agent-spawn; null keeps its default
 timeout: null                   # passed to agent-spawn, for example 30m; null keeps its default
-cwd: null                       # the session's working directory (absolute path or session-dir); null: the caller's directory (interactive), session-dir (headless)
+cwd: null                       # caller or session-dir; null: the caller's directory (interactive), session-dir (headless)
 sandbox: "off"                  # required, preferred or off (quoted: a bare off is a YAML boolean)
 setting_sources: []             # --setting-sources: any of user, project, local; empty loads none
 permission_profile: null        # absolute path of a permission profile; null uses the bundled one
 env_allowlist: []               # environment variable names added to the fixed base list passed to the session
+credential_env: []              # variable names removed from the environment of hooks and the editor; list your ticketctl token variable (validate warns while empty)
 plugin_dirs: []                 # extra plugin directories (absolute, owned by you)
 
-# Template files by issue type name, or default for every type. Absolute paths owned by you.
+# Template files by issue type name, or default for every type (the type is the fixed one: flag or default_type). Absolute paths owned by you.
 templates: {}
 #  default: /opt/ticket-create/templates/default.md
 #  Bug: /opt/ticket-create/templates/bug.md
@@ -41,11 +42,11 @@ duplicates:
 editor: null                    # the edit command (split with shlex, never a shell); null means $VISUAL, then $EDITOR, then vi
 
 retention:
-  open: 30d                     # lifetime of drafts that have not produced a ticket
-  done: 90d                     # lifetime of created drafts
+  open: 30d                     # lifetime of drafts that have not produced a ticket (drafting, ready, failed, abandoned)
+  done: 90d                     # lifetime of drafts that have a ticket or may have one (created, sprint_failed, unknown)
 
 limits:
-  artifact_bytes: 65536         # size cap for the draft artifact, 1024 to 1048576
+  artifact_bytes: 262144        # size cap for the draft artifact, 4096 to 1048576
   title_chars: 255              # title length cap, 1 to 255
 
 # Hooks (design guide section 8). pre-draft may veto (exit 11) or escalate (exit 13);
@@ -62,7 +63,7 @@ hooks:
   #     async: true
 
 # Per-repo overrides keyed by repo id (host/<full project path>). Only skill, templates, sandbox,
-# setting_sources, env_allowlist, plugin_dirs, permission_profile, cwd and model may be set here.
+# setting_sources, env_allowlist, plugin_dirs, permission_profile, cwd and model may be set here (never hooks, ticketctl.*, editor or credential_env).
 repos: {}
 #  git.example.test/team/service:
 #    skill: ticket-create:draft-ticket

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "ticket-create/hooks/post-create.json",
   "title": "post-create hook payload (stdin)",
-  "description": "After the create and sprint steps. At least once; deduplicate by event_id. No repo or labels key (the tool has no repository notion of its own). No title, body, notes or other model text.",
+  "description": "After the create and sprint steps. attempt and dedupe_key are null for a sprint-only run. event_id is fresh per invocation. No repo or labels key (the draft has a repo; it is not part of the payload). No title, body, notes or other model text.",
   "type": "object",
   "properties": {
     "tool": {
@@ -46,27 +46,41 @@
       "$ref": "../defs.json#/$defs/sprint_step"
     },
     "attempt": {
-      "type": "object",
-      "properties": {
-        "n": {
-          "type": "integer",
-          "minimum": 1
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "n": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "plan_sha256": {
+              "$ref": "../defs.json#/$defs/sha256"
+            }
+          },
+          "required": [
+            "n",
+            "plan_sha256"
+          ],
+          "additionalProperties": false
         },
-        "plan_sha256": {
-          "$ref": "../defs.json#/$defs/sha256"
+        {
+          "type": "null"
         }
-      },
-      "required": [
-        "n",
-        "plan_sha256"
-      ],
-      "additionalProperties": false
+      ]
     },
     "event_id": {
       "$ref": "../defs.json#/$defs/event_id"
     },
     "dedupe_key": {
-      "$ref": "../defs.json#/$defs/hook_dedupe_key"
+      "oneOf": [
+        {
+          "$ref": "../defs.json#/$defs/dedupe_key"
+        },
+        {
+          "type": "null"
+        }
+      ]
     },
     "reads_third_party": {
       "const": false

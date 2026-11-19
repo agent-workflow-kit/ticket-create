@@ -35,7 +35,7 @@ See [Commands](docs/interface.md#commands) for every flag.
 | [ticketctl](https://github.com/agent-workflow-kit/ticketctl) | A (hard) | `uv tool install git+https://github.com/agent-workflow-kit/ticketctl` |
 | [agent-spawn](https://github.com/agent-workflow-kit/agent-spawn) (0.34.0 or later) | A (hard) | `uv tool install git+https://github.com/agent-workflow-kit/agent-spawn` |
 
-agent-spawn needs [claude-session](https://github.com/agent-workflow-kit/claude-session) and [wtctl](https://github.com/agent-workflow-kit/wtctl) installed, and the ticket system's token variable must be listed in claude-session's `secret_env` so the draft session never receives it. A missing sibling is reported with its install command.
+agent-spawn needs [claude-session](https://github.com/agent-workflow-kit/claude-session) and [wtctl](https://github.com/agent-workflow-kit/wtctl) installed, and the ticket system's token variable must be listed in claude-session's `secret_env` so the draft session never receives it (the bundled permission profile also denies `mcp__*` tools; replace the profile in config if you want connectors in draft sessions). A missing sibling is reported with its install command.
 
 ## Install
 
@@ -45,7 +45,7 @@ uv tool install git+https://github.com/agent-workflow-kit/ticket-create
 
 ## Configuration
 
-`~/.config/ticket-create/config.yaml` with drop-ins in `config.d/`. See [Configuration](docs/interface.md#configuration) and `config.example.yaml`. Environment overrides use the prefix `TICKET_CREATE_`.
+`~/.config/ticket-create/config.yaml` with drop-ins in `config.d/`. See [Configuration](docs/interface.md#configuration) and `config.example.yaml`. Environment overrides use the prefix `TICKET_CREATE_` and apply only to `mode`, `model`, `timeout`, `duplicates.*` and `retention.*`; every other key comes from config files and flags. Set `credential_env` to the names of your ticketctl token variables so hooks and the editor do not inherit them (`validate` warns while it is empty).
 
 ## Hooks
 
@@ -53,7 +53,7 @@ uv tool install git+https://github.com/agent-workflow-kit/ticket-create
 
 ## Exit codes
 
-See [Exit codes](docs/interface.md#exit-codes). In short: 0 done, 13 a human is needed (no terminal for `create`), 14 to 18 the draft session's outcome, 20 refused, 22 a draft's content is missing or invalid.
+See [Exit codes](docs/interface.md#exit-codes). In short: 0 done, 13 a human is needed (no terminal for `create`, or a ticketctl hook asked for review and the override was declined), 14 to 18 the draft session's outcome, 20 refused, 22 a draft's content is missing or invalid (22 also covers ticketctl's input validation on a dry-run).
 
 ## Documentation
 
